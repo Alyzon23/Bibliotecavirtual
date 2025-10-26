@@ -11,6 +11,15 @@ dependencies:
   flutter:
     sdk: flutter
   
+  # Supabase (alternativa gratuita)
+  supabase_flutter: ^2.5.6
+  
+  # File picker para subir archivos
+  file_picker: ^8.1.2
+  
+  # Para abrir URLs
+  url_launcher: ^6.3.2
+  
   # UI y navegación
   flutter_bloc: ^8.1.3
   go_router: ^12.1.3

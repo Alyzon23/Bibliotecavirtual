@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../data/services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../data/services/supabase_auth_service.dart';
 import '../auth/login_screen.dart';
 
 class UserHome extends StatefulWidget {
-  final AuthService authService;
+  final SupabaseAuthService authService;
   
   const UserHome({super.key, required this.authService});
 
@@ -151,8 +153,78 @@ class _HomeTab extends StatelessWidget {
   }
 }
 
-class _LibraryTab extends StatelessWidget {
+class _LibraryTab extends StatefulWidget {
   const _LibraryTab();
+
+  @override
+  State<_LibraryTab> createState() => _LibraryTabState();
+}
+
+class _LibraryTabState extends State<_LibraryTab> {
+  
+  Future<List<Map<String, dynamic>>> _loadBooks() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  void _openBook(Map<String, dynamic> book) {
+    // Por ahora solo mostrar info
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(book['title']),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Autor: ${book['author']}'),
+            const SizedBox(height: 8),
+            Text('Formato: ${book['format'].toUpperCase()}'),
+            const SizedBox(height: 8),
+            if (book['description'] != null)
+              Text('Descripción: ${book['description']}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _readBook(book['file_url']);
+            },
+            child: const Text('Leer'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _readBook(String fileUrl) async {
+    try {
+      final uri = Uri.parse(fileUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se puede abrir el archivo')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,43 +241,78 @@ class _LibraryTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: 20,
-              itemBuilder: (context, index) => Card(
-                child: Column(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                        ),
-                        child: const Icon(Icons.book, size: 40),
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadBooks(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay libros disponibles'));
+                }
+                
+                return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.7,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final book = snapshot.data![index];
+                    return Card(
+                      child: InkWell(
+                        onTap: () => _openBook(book),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Libro ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const Text('Autor', style: TextStyle(color: Colors.grey)),
+                            Expanded(
+                              flex: 3,
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                ),
+                                child: book['cover_url'] != null
+                                    ? Image.network(
+                                        book['cover_url'],
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.book, size: 40),
+                                      )
+                                    : const Icon(Icons.book, size: 40),
+                              ),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      book['title'],
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      book['author'],
+                                      style: const TextStyle(color: Colors.grey),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],

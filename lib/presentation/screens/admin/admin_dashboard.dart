@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../data/services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../data/services/supabase_auth_service.dart';
 import '../auth/login_screen.dart';
+import 'add_book_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
-  final AuthService authService;
+  final SupabaseAuthService authService;
   
   const AdminDashboard({super.key, required this.authService});
 
@@ -124,8 +126,43 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _BooksTab extends StatelessWidget {
+class _BooksTab extends StatefulWidget {
   const _BooksTab();
+
+  @override
+  State<_BooksTab> createState() => _BooksTabState();
+}
+
+class _BooksTabState extends State<_BooksTab> {
+  
+  Future<List<Map<String, dynamic>>> _loadBooks() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  Future<void> _deleteBook(String bookId) async {
+    try {
+      await Supabase.instance.client
+          .from('books')
+          .delete()
+          .eq('id', bookId);
+      setState(() {}); // Refresh
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Libro eliminado')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +175,16 @@ class _BooksTab extends StatelessWidget {
             children: [
               const Text('Gestión de Libros', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AddBookScreen()),
+                  );
+                  if (result == true) {
+                    // Refresh books list
+                    if (mounted) setState(() {});
+                  }
+                },
                 icon: const Icon(Icons.add),
                 label: const Text('Agregar Libro'),
               ),
@@ -146,21 +192,50 @@ class _BooksTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView.builder(
-              itemCount: 10,
-              itemBuilder: (context, index) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.book),
-                  title: Text('Libro ${index + 1}'),
-                  subtitle: const Text('Autor • PDF • 2024'),
-                  trailing: PopupMenuButton(
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                      const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-                    ],
-                  ),
-                ),
-              ),
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadBooks(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay libros agregados'));
+                }
+                
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final book = snapshot.data![index];
+                    return Card(
+                      child: ListTile(
+                        leading: book['cover_url'] != null
+                            ? Image.network(
+                                book['cover_url'],
+                                width: 40,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.book),
+                              )
+                            : const Icon(Icons.book),
+                        title: Text(book['title']),
+                        subtitle: Text('${book['author']} • ${book['format'].toUpperCase()}'),
+                        trailing: PopupMenuButton(
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                            const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                          ],
+                          onSelected: (value) {
+                            if (value == 'delete') {
+                              _deleteBook(book['id']);
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
