@@ -10,6 +10,20 @@ class SupabaseAuthService {
   bool get isLoggedIn => _currentUser != null;
   bool get isAdmin => _currentUser?.isAdmin ?? false;
 
+  app_user.UserRole _parseUserRole(String? role) {
+    switch (role) {
+      case 'admin':
+        return app_user.UserRole.admin;
+      case 'bibliotecario':
+        return app_user.UserRole.bibliotecario;
+      case 'profesor':
+        return app_user.UserRole.profesor;
+      case 'lector':
+      default:
+        return app_user.UserRole.lector;
+    }
+  }
+
   Future<bool> register(String email, String password, String name) async {
     try {
       final response = await _supabase.auth.signUp(
@@ -23,7 +37,7 @@ class SupabaseAuthService {
             'id': response.user!.id,
             'email': email,
             'name': name,
-            'role': 'user',
+            'role': 'lector',
             'created_at': DateTime.now().toIso8601String(),
           });
         } catch (e) {
@@ -34,7 +48,7 @@ class SupabaseAuthService {
           id: response.user!.id,
           email: email,
           name: name,
-          role: app_user.UserRole.user,
+          role: app_user.UserRole.lector,
           createdAt: DateTime.now(),
         );
         return true;
@@ -64,7 +78,7 @@ class SupabaseAuthService {
             id: response.user!.id,
             email: userData['email'],
             name: userData['name'],
-            role: userData['role'] == 'admin' ? app_user.UserRole.admin : app_user.UserRole.user,
+            role: _parseUserRole(userData['role']),
             createdAt: DateTime.parse(userData['created_at']),
           );
         } catch (e) {
@@ -73,7 +87,7 @@ class SupabaseAuthService {
             id: response.user!.id,
             email: email,
             name: 'Usuario',
-            role: app_user.UserRole.user,
+            role: app_user.UserRole.lector,
             createdAt: DateTime.now(),
           );
         }

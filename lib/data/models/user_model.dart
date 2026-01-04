@@ -1,4 +1,4 @@
-enum UserRole { admin, user }
+enum UserRole { admin, bibliotecario, profesor, lector }
 
 class User {
   final String id;
@@ -28,4 +28,14 @@ class User {
   }
 
   bool get isAdmin => role == UserRole.admin;
+  bool get isBibliotecario => role == UserRole.bibliotecario;
+  bool get isProfesor => role == UserRole.profesor;
+  bool get isLector => role == UserRole.lector;
+  
+  // Permisos específicos
+  bool get canUploadContent => isAdmin || isBibliotecario || isProfesor;
+  bool get canDeleteContent => isAdmin || isBibliotecario;
+  bool get canEditContent => isAdmin || isBibliotecario;
+  bool get canManageUsers => isAdmin;
+  bool get canViewStats => isAdmin || isBibliotecario;
 }

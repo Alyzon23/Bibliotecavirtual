@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:glassmorphism/glassmorphism.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:animate_do/animate_do.dart';
 import '../../../data/services/supabase_auth_service.dart';
+import '../../theme/glass_theme.dart';
 import '../auth/login_screen.dart';
+import '../../../main.dart';
+import 'video_player_screen.dart';
+import 'book_detail_screen.dart';
+import 'simple_video_player.dart';
+import 'youtube_video_player.dart';
 
 class UserHome extends StatefulWidget {
   final SupabaseAuthService authService;
@@ -15,6 +24,47 @@ class UserHome extends StatefulWidget {
 
 class _UserHomeState extends State<UserHome> {
   int _selectedIndex = 0;
+  String _userName = 'Usuario';
+  String _userEmail = 'user@biblioteca.com';
+  String _userRole = 'usuario';
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final ValueNotifier<bool> _searchingNotifier = ValueNotifier<bool>(false);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _searchingNotifier.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      try {
+        final userData = await Supabase.instance.client
+            .from('users')
+            .select('name, email, role')
+            .eq('id', user.id)
+            .single();
+        
+        setState(() {
+          _userName = userData['name'] ?? 'Usuario';
+          _userEmail = userData['email'] ?? user.email ?? 'user@biblioteca.com';
+          _userRole = userData['role'] ?? 'usuario';
+        });
+      } catch (e) {
+        print('Error cargando datos del usuario: $e');
+      }
+    }
+  }
 
   void _logout() {
     widget.authService.logout();
@@ -24,172 +74,509 @@ class _UserHomeState extends State<UserHome> {
     );
   }
 
+  void _performSearch(String query) {
+    if (query.trim().isEmpty) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Resultados para "$query"'),
+        content: const SizedBox(
+          width: 400,
+          height: 200,
+          child: Center(
+            child: Text('Función de búsqueda en desarrollo'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getSelectedPage() {
+    if (_searchQuery.isNotEmpty) {
+      return _SearchResultsTab(searchQuery: _searchQuery);
+    }
+    
+    switch (_selectedIndex) {
+      case 0:
+        return _HomeTab(searchQuery: _searchQuery);
+      case 1:
+        return _LibraryTab(searchQuery: _searchQuery);
+      case 2:
+        return _VideosTab(searchQuery: _searchQuery);
+      case 3:
+        return const _FavoritesTab();
+      case 4:
+        return const _ProfileTab();
+      case 5:
+        return const _TopBooksTab();
+      default:
+        return _HomeTab(searchQuery: _searchQuery);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Biblioteca Digital'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF1E3A8A), // Azul Yavirac
+              Color(0xFF3B82F6), // Azul más claro
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
+        ),
+        child: Row(
+          children: [
+            // Sidebar fijo
+            FadeInLeft(
+              child: GlassmorphicContainer(
+                width: 280,
+                height: double.infinity,
+                borderRadius: 0,
+                blur: 20,
+                alignment: Alignment.center,
+                border: 0,
+                linearGradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF1E3A8A).withOpacity(0.9), // Azul Yavirac
+                    const Color(0xFF1D4ED8).withOpacity(0.95), // Azul institucional
+                  ],
+                ),
+                borderGradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Header del usuario
+                    FadeInDown(
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            // Avatar con gradiente
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)], // Azul Yavirac
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF1E3A8A).withOpacity(0.3), // Azul Yavirac
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _userName,
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF1E3A8A), Color(0xFFFFFFFF)], // Azul y blanco Yavirac
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _userRole.toUpperCase(),
+                                style: GoogleFonts.poppins(
+                                  color: _userRole == 'admin' ? Colors.white : const Color(0xFF1E3A8A), // Blanco para admin, azul para usuario
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Menú principal
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        children: [
+                          _buildMenuItem(Icons.home, 'Inicio', 0),
+                          _buildMenuItem(Icons.library_books, 'Libros', 1),
+                          _buildMenuItem(Icons.video_library, 'Videos', 2),
+                          _buildMenuItem(Icons.favorite, 'Favoritos', 3),
+                          _buildMenuItem(Icons.person, 'Perfil', 4),
+                          const Divider(color: Colors.white24, height: 32),
+                          _buildMenuItem(Icons.trending_up, 'Top 10 Libros', 5),
+                          _buildMenuItem(Icons.settings, 'Configuración', -1, onTap: () {
+                            // Cambiar a pestaña de perfil
+                            setState(() => _selectedIndex = 4);
+                          }),
+                          ListTile(
+                            leading: ValueListenableBuilder<bool>(
+                              valueListenable: ThemeManager.isDarkMode,
+                              builder: (context, isDark, child) {
+                                return Icon(
+                                  isDark ? Icons.light_mode : Icons.dark_mode,
+                                  color: Colors.white70,
+                                );
+                              },
+                            ),
+                            title: ValueListenableBuilder<bool>(
+                              valueListenable: ThemeManager.isDarkMode,
+                              builder: (context, isDark, child) {
+                                return Text(
+                                  isDark ? 'Modo Claro' : 'Modo Oscuro',
+                                  style: const TextStyle(color: Colors.white),
+                                );
+                              },
+                            ),
+                            onTap: () {
+                              ThemeManager.toggleTheme();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Cerrar sesión
+                    FadeInUp(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF1E3A8A), Color(0xFFFFFFFF)], // Azul y blanco Yavirac
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFF093FB).withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _logout,
+                              borderRadius: BorderRadius.circular(16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Cerrar Sesión',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+                // Contenido principal
+                Expanded(
+                  child: Column(
+                    children: [
+                      // AppBar
+                      GlassmorphicContainer(
+                        width: double.infinity,
+                        height: 70,
+                        borderRadius: 0,
+                        blur: 15,
+                        alignment: Alignment.center,
+                        border: 0,
+                        linearGradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.1),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                        ),
+                        borderGradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.2),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              const Spacer(),
+                              Text(
+                                'Biblioteca Virtual Yavirac',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const Spacer(),
+                              ValueListenableBuilder<bool>(
+                                valueListenable: _searchingNotifier,
+                                builder: (context, isSearching, child) {
+                                  return isSearching
+                                      ? Container(
+                                          height: 40,
+                                          width: 250,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: GlassTheme.primaryColor, width: 1),
+                                          ),
+                                          child: TextField(
+                                            controller: _searchController,
+                                            style: GoogleFonts.outfit(color: Colors.grey.shade800, fontSize: 14),
+                                            decoration: InputDecoration(
+                                              hintText: 'Buscar...',
+                                              hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400, fontSize: 14),
+                                              border: InputBorder.none,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                            ),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _searchQuery = value;
+                                              });
+                                            },
+                                            onSubmitted: (value) {
+                                              _searchingNotifier.value = false;
+                                              setState(() {
+                                                _searchQuery = '';
+                                              });
+                                            },
+                                            autofocus: true,
+                                          ),
+                                        )
+                                      : const SizedBox(width: 250);
+                                },
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                                ),
+                                child: ValueListenableBuilder<bool>(
+                                  valueListenable: _searchingNotifier,
+                                  builder: (context, isSearching, child) {
+                                    return IconButton(
+                                      icon: Icon(isSearching ? Icons.close : Icons.search, color: Colors.white70),
+                                      onPressed: () {
+                                        _searchingNotifier.value = !_searchingNotifier.value;
+                                        if (!_searchingNotifier.value) {
+                                          _searchController.clear();
+                                          setState(() {
+                                            _searchQuery = '';
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                _userName,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.logout, color: Colors.redAccent),
+                                  onPressed: _logout,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Contenido
+                      Expanded(
+                        child: Container(
+                          // Remove color to show validation background
+                          child: _getSelectedPage(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: const [
-          _HomeTab(),
-          _LibraryTab(),
-          _FavoritesTab(),
-          _ProfileTab(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Inicio',
+    );
+  }
+
+
+  Widget _buildMenuItem(IconData icon, String title, int index, {VoidCallback? onTap}) {
+    final isSelected = _selectedIndex == index;
+    return FadeInLeft(
+      delay: Duration(milliseconds: 100 * index),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: isSelected ? const LinearGradient(
+            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)], // Azul Yavirac
+          ) : null,
+          borderRadius: BorderRadius.circular(16),
+          border: isSelected ? null : Border.all(
+            color: Colors.white.withOpacity(0.1),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books),
-            label: 'Biblioteca',
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap ?? (index >= 0 ? () {
+              setState(() => _selectedIndex = index);
+            } : null),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Favoritos',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
 class _HomeTab extends StatelessWidget {
-  const _HomeTab();
+  final String searchQuery;
+  const _HomeTab({this.searchQuery = ''});
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Bienvenido a tu Biblioteca', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          const Text('Continúa leyendo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 5,
-              itemBuilder: (context, index) => Container(
-                width: 120,
-                margin: const EdgeInsets.only(right: 12),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.book, size: 40),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Libro ${index + 1}', style: const TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text('Recomendados', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 8,
-              itemBuilder: (context, index) => Container(
-                width: 120,
-                margin: const EdgeInsets.only(right: 12),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.blue[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.auto_stories, size: 40),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Recomendado ${index + 1}', style: const TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LibraryTab extends StatefulWidget {
-  const _LibraryTab();
-
-  @override
-  State<_LibraryTab> createState() => _LibraryTabState();
-}
-
-class _LibraryTabState extends State<_LibraryTab> {
-  
-  Future<List<Map<String, dynamic>>> _loadBooks() async {
+  Future<List<Map<String, dynamic>>> _loadTopBooks() async {
     try {
       final response = await Supabase.instance.client
-          .from('books')
-          .select()
-          .order('created_at', ascending: false);
+          .from('book_stats')
+          .select('book_id, open_count, books(*)')
+          .order('open_count', ascending: false)
+          .limit(10);
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       return [];
     }
   }
-  
-  void _openBook(Map<String, dynamic> book) {
-    // Por ahora solo mostrar info
+
+  Future<List<Map<String, dynamic>>> _loadRecentBooks() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadRecentVideos() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('videos')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  void _openVideo(BuildContext context, Map<String, dynamic> video) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(book['title']),
+        title: Text(video['title']),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Autor: ${book['author']}'),
+            if (video['description'] != null)
+              Text('Descripción: ${video['description']}'),
             const SizedBox(height: 8),
-            Text('Formato: ${book['format'].toUpperCase()}'),
+            Text('Categoría: ${video['category']}'),
             const SizedBox(height: 8),
-            if (book['description'] != null)
-              Text('Descripción: ${book['description']}'),
+            Text('Vistas: ${video['views'] ?? 0}'),
           ],
         ),
         actions: [
@@ -200,23 +587,28 @@ class _LibraryTabState extends State<_LibraryTab> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _readBook(book['file_url']);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VideoPlayerScreen(video: video),
+                ),
+              );
             },
-            child: const Text('Leer'),
+            child: const Text('Ver Video'),
           ),
         ],
       ),
     );
   }
-  
-  void _readBook(String fileUrl) async {
+
+  void _playVideo(BuildContext context, String videoId) async {
     try {
-      final uri = Uri.parse(fileUrl);
+      final uri = Uri.parse('https://www.youtube.com/watch?v=$videoId');
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se puede abrir el archivo')),
+          const SnackBar(content: Text('No se puede abrir el video')),
         );
       }
     } catch (e) {
@@ -228,79 +620,1558 @@ class _LibraryTabState extends State<_LibraryTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Buscar libros...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          // Header con título
+          FadeInDown(
+            child: Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)], // Azul Yavirac
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF1E3A8A).withOpacity(0.3), // Azul Yavirac
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -50,
+                    top: -50,
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '¡Bienvenido!',
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Descubre miles de libros y videos educativos',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          Expanded(
+          const SizedBox(height: 32),
+          
+          // Top 10 Más Leídos
+          GlassmorphicContainer(
+            width: double.infinity,
+            height: 300,
+            borderRadius: 20,
+            blur: 15,
+            alignment: Alignment.center,
+            border: 0,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.05),
+                Colors.white.withOpacity(0.02),
+              ],
+            ),
+            borderGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.1),
+                Colors.white.withOpacity(0.05),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: GlassTheme.primaryColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.trending_up,
+                          color: GlassTheme.primaryColor,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Top 10 Más Leídos',
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _loadTopBooks(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator(color: Colors.white));
+                        }
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return Center(child: Text('No hay datos disponibles', style: GoogleFonts.outfit(color: Colors.white70)));
+                        }
+                        return ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            final item = snapshot.data![index];
+                            final book = item['books'];
+                            
+                            // Filtrar por búsqueda
+                            if (searchQuery.isNotEmpty) {
+                              final title = (book['title'] ?? '').toString().toLowerCase();
+                              final author = (book['author'] ?? '').toString().toLowerCase();
+                              final query = searchQuery.toLowerCase();
+                              if (!title.contains(query) && !author.contains(query)) {
+                                return const SizedBox.shrink();
+                              }
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: GestureDetector(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => BookDetailScreen(book: book),
+                                  ),
+                                ),
+                                child: GlassmorphicContainer(
+                                width: 140,
+                                height: 200,
+                                borderRadius: 12,
+                                blur: 10,
+                                alignment: Alignment.center,
+                                border: 0,
+                                linearGradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white.withOpacity(0.1),
+                                    Colors.white.withOpacity(0.05),
+                                  ],
+                                ),
+                                borderGradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white.withOpacity(0.2),
+                                    Colors.white.withOpacity(0.1),
+                                  ],
+                                ),
+                                child: IntrinsicHeight(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        height: 120,
+                                        child: ClipRRect(
+                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                          child: book['cover_url'] != null
+                                              ? Image.network(
+                                                  book['cover_url'],
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
+                                                )
+                                              : const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
+                                        ),
+                                      ),
+                                      Container(
+                                        height: 70,
+                                        padding: const EdgeInsets.all(8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              book['title'] ?? 'Sin título',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              book['author'] ?? 'Autor desconocido',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 9,
+                                                color: Colors.white70,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Libros Recientes
+          const Text(
+            'Libros Recientes',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 200,
             child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _loadBooks(),
+              future: _loadRecentBooks(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(child: Text('No hay libros disponibles'));
+                }
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final book = snapshot.data![index];
+                    return Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookDetailScreen(book: book),
+                          ),
+                        ),
+                        child: Card(
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.grey,
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                                  ),
+                                  child: book['cover_url'] != null
+                                      ? Image.network(
+                                          book['cover_url'],
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => const Icon(Icons.book, size: 40),
+                                        )
+                                      : const Icon(Icons.book, size: 40),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  book['title'],
+                                  style: const TextStyle(fontSize: 12),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Videos Recientes
+          const Text(
+            'Videos Recientes',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 200,
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadRecentVideos(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay videos disponibles'));
+                }
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final video = snapshot.data![index];
+                    return Container(
+                      width: 200,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => YouTubeVideoPlayer(video: video),
+                          ),
+                        ),
+                        child: Card(
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.grey,
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                                  ),
+                                  child: video['thumbnail_url'] != null
+                                      ? Image.network(
+                                          video['thumbnail_url'],
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => const Icon(Icons.video_library, size: 40),
+                                        )
+                                      : const Icon(Icons.video_library, size: 40),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  video['title'],
+                                  style: const TextStyle(fontSize: 12),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryTab extends StatelessWidget {
+  final String searchQuery;
+  const _LibraryTab({this.searchQuery = ''});
+  
+  Future<List<Map<String, dynamic>>> _loadTopBooks() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('book_stats')
+          .select('book_id, open_count, books(*)')
+          .order('open_count', ascending: false)
+          .limit(10);
+      return response.map((item) => item['books'] as Map<String, dynamic>).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> _loadRecentBooks() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> _loadSuggestions() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .order('title')
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Widget _buildBookList(List<Map<String, dynamic>> books, BuildContext context) {
+    return SizedBox(
+      height: 200,
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
+          ),
+          Expanded(
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: books.length,
+              itemBuilder: (context, index) {
+                final book = books[index];
+                return Container(
+                  width: 160,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BookDetailScreen(book: book),
+                      ),
+                    ),
+                    child: GlassmorphicContainer(
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: 12,
+                      blur: 10,
+                      alignment: Alignment.center,
+                      border: 0,
+                      linearGradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.1),
+                          Colors.white.withOpacity(0.05),
+                        ],
+                      ),
+                      borderGradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.2),
+                          Colors.white.withOpacity(0.1),
+                        ],
+                      ),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 120,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                child: book['cover_url'] != null
+                                    ? Image.network(
+                                        book['cover_url'],
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
+                                      )
+                                    : const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
+                              ),
+                            ),
+                            Container(
+                              height: 60,
+                              padding: const EdgeInsets.all(6),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      book['title'] ?? 'Sin título',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      book['author'] ?? 'Autor desconocido',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 8,
+                                        color: Colors.white70,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.arrow_forward_ios, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top 10 Libros
+          Text(
+            'Top 10 Libros',
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadTopBooks(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return SizedBox(height: 200, child: Center(child: Text('No hay libros populares', style: GoogleFonts.outfit(color: Colors.white70))));
+              }
+              return _buildBookList(snapshot.data!, context);
+            },
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Libros Recientes
+          Text(
+            'Libros Recientes',
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadRecentBooks(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return SizedBox(height: 200, child: Center(child: Text('No hay libros recientes', style: GoogleFonts.outfit(color: Colors.white70))));
+              }
+              return _buildBookList(snapshot.data!, context);
+            },
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Libros Sugeridos
+          Text(
+            'Libros Sugeridos',
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadSuggestions(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return SizedBox(height: 200, child: Center(child: Text('No hay libros sugeridos', style: GoogleFonts.outfit(color: Colors.white70))));
+              }
+              return _buildBookList(snapshot.data!, context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VideosTab extends StatelessWidget {
+  final String searchQuery;
+  const _VideosTab({this.searchQuery = ''});
+
+  Future<List<Map<String, dynamic>>> _loadTopVideos() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('videos')
+          .select()
+          .order('views', ascending: false)
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> _loadRecentVideos() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('videos')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> _loadRecommendedVideos() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('videos')
+          .select()
+          .order('title')
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Widget _buildVideoList(List<Map<String, dynamic>> videos, BuildContext context) {
+    return SizedBox(
+      height: 200,
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
+          ),
+          Expanded(
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: videos.length,
+              itemBuilder: (context, index) {
+                final video = videos[index];
+                return Container(
+                  width: 280,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => YouTubeVideoPlayer(video: video),
+                      ),
+                    ),
+                    child: GlassmorphicContainer(
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: 12,
+                      blur: 10,
+                      alignment: Alignment.center,
+                      border: 0,
+                      linearGradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.1),
+                          Colors.white.withOpacity(0.05),
+                        ],
+                      ),
+                      borderGradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.2),
+                          Colors.white.withOpacity(0.1),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                              child: video['thumbnail_url'] != null
+                                  ? Image.network(
+                                      video['thumbnail_url'],
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: Colors.grey.shade800,
+                                        child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
+                                      ),
+                                    )
+                                  : Container(
+                                      color: Colors.grey.shade800,
+                                      child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
+                                    ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      video['title'] ?? 'Sin título',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      video['category'] ?? 'Sin categoría',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 10,
+                                        color: Colors.white70,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (video['views'] != null)
+                                    Flexible(
+                                      child: Text(
+                                        '${video['views']} vistas',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 9,
+                                          color: Colors.white54,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.arrow_forward_ios, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top 10 Videos
+          Text(
+            'Top 10 Videos',
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadTopVideos(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return SizedBox(height: 200, child: Center(child: Text('No hay videos populares', style: GoogleFonts.outfit(color: Colors.white70))));
+              }
+              return _buildVideoList(snapshot.data!, context);
+            },
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Videos Recientes
+          Text(
+            'Videos Recientes',
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadRecentVideos(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return SizedBox(height: 200, child: Center(child: Text('No hay videos recientes', style: GoogleFonts.outfit(color: Colors.white70))));
+              }
+              return _buildVideoList(snapshot.data!, context);
+            },
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Videos Recomendados
+          Text(
+            'Videos Recomendados',
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadRecommendedVideos(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return SizedBox(height: 200, child: Center(child: Text('No hay videos recomendados', style: GoogleFonts.outfit(color: Colors.white70))));
+              }
+              return _buildVideoList(snapshot.data!, context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FavoritesTab extends StatelessWidget {
+  const _FavoritesTab();
+
+  Future<List<Map<String, dynamic>>> _loadFavorites() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final response = await Supabase.instance.client
+          .from('favorites')
+          .select('book_id, books(*)')
+          .eq('user_id', user.id);
+      
+      return response.map((item) => item['books'] as Map<String, dynamic>).toList();
+    } catch (e) {
+      print('Error loading favorites: $e');
+      return [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mis Favoritos',
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadFavorites(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.white));
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.favorite_border, size: 80, color: Colors.white24),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No tienes favoritos aún',
+                          style: GoogleFonts.outfit(fontSize: 18, color: Colors.white54),
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 
                 return GridView.builder(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.7,
+                    crossAxisCount: 4,
+                    childAspectRatio: 0.75,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
                     final book = snapshot.data![index];
-                    return Card(
-                      child: InkWell(
-                        onTap: () => _openBook(book),
+                    return GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BookDetailScreen(book: book),
+                        ),
+                      ),
+                      child: GlassmorphicContainer(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 8,
+                        blur: 8,
+                        alignment: Alignment.center,
+                        border: 0,
+                        linearGradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.15),
+                            Colors.white.withOpacity(0.08),
+                          ],
+                        ),
+                        borderGradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.3),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
                         child: Column(
                           children: [
                             Expanded(
-                              flex: 3,
+                              flex: 4,
                               child: Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                margin: const EdgeInsets.all(6),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: book['cover_url'] != null
+                                      ? Image.network(
+                                          book['cover_url'],
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            color: Colors.red.withOpacity(0.2),
+                                            child: const Icon(Icons.favorite, size: 30, color: Colors.red),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: Colors.red.withOpacity(0.2),
+                                          child: const Icon(Icons.favorite, size: 30, color: Colors.red),
+                                        ),
                                 ),
-                                child: book['cover_url'] != null
-                                    ? Image.network(
-                                        book['cover_url'],
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Icon(Icons.book, size: 40),
-                                      )
-                                    : const Icon(Icons.book, size: 40),
                               ),
                             ),
-                            Expanded(
+                            Flexible(
                               child: Padding(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                                child: Text(
+                                  book['title'] ?? 'Sin título',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileTab extends StatelessWidget {
+  const _ProfileTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.white.withOpacity(0.1),
+            child: const Icon(Icons.person, size: 50, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          FutureBuilder<Map<String, String>>(
+            key: ValueKey(DateTime.now().millisecondsSinceEpoch), // Forzar rebuild
+            future: _getUserData(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const CircularProgressIndicator(color: Colors.white);
+              }
+              
+              final userData = snapshot.data ?? {'name': 'Usuario', 'email': 'user@biblioteca.com'};
+              
+              return Column(
+                children: [
+                  Text(
+                    userData['name']!,
+                    style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  Text(
+                    userData['email']!,
+                    style: GoogleFonts.outfit(color: Colors.white70),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 32),
+          _buildProfileTile(Icons.history, 'Historial de lectura'),
+          _buildProfileTile(Icons.settings, 'Configuración', onTap: () => _showConfigDialog(context)),
+          _buildProfileTile(Icons.help, 'Ayuda', onTap: () => _showHelpDialog(context)),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<String, String>> _getUserData() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      try {
+        final userData = await Supabase.instance.client
+            .from('users')
+            .select('name, email')
+            .eq('id', user.id)
+            .single();
+        
+        return {
+          'name': userData['name'] ?? 'Usuario',
+          'email': userData['email'] ?? user.email ?? 'user@biblioteca.com',
+        };
+      } catch (e) {
+        return {
+          'name': 'Usuario',
+          'email': user.email ?? 'user@biblioteca.com',
+        };
+      }
+    }
+    return {'name': 'Usuario', 'email': 'user@biblioteca.com'};
+  }
+
+  void _showConfigDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: Text('Configuración', style: GoogleFonts.outfit(color: Colors.white)),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: GoogleFonts.outfit(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Nuevo nombre',
+                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: GlassTheme.primaryColor),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                style: GoogleFonts.outfit(color: Colors.white),
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Nueva contraseña',
+                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: GlassTheme.primaryColor),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                style: GoogleFonts.outfit(color: Colors.white),
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Confirmar contraseña',
+                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: GlassTheme.primaryColor),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: GlassTheme.primaryColor),
+            onPressed: () async {
+              await _updateUserData(context, nameController.text, passwordController.text, confirmPasswordController.text);
+            },
+            child: Text('Guardar', style: GoogleFonts.outfit(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    final requestController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: Row(
+          children: [
+            const Icon(Icons.help, color: Colors.white),
+            const SizedBox(width: 8),
+            Text('Ayuda y Soporte', style: GoogleFonts.outfit(color: Colors.white)),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Escribe tu solicitud:',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: requestController,
+                maxLines: 5,
+                style: GoogleFonts.outfit(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Describe tu solicitud aquí...',
+                  hintStyle: GoogleFonts.outfit(color: Colors.white54),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextButton(
+              onPressed: () {
+                if (requestController.text.trim().isNotEmpty) {
+                  Navigator.pop(context);
+                  _sendRequest(requestController.text, context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Por favor escribe tu solicitud'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: Text('Enviar', style: GoogleFonts.outfit(color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendRequest(String request, BuildContext context) async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+      
+      final userData = await Supabase.instance.client
+          .from('users')
+          .select('name, email')
+          .eq('id', user.id)
+          .single();
+      
+      final userName = userData['name'] ?? 'Usuario';
+      final userEmail = userData['email'] ?? user.email ?? 'usuario@yavirac.edu.ec';
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          backgroundColor: Color(0xFF1E293B),
+          content: Row(
+            children: [
+              CircularProgressIndicator(color: Color(0xFF1E3A8A)),
+              SizedBox(width: 16),
+              Text('Enviando solicitud...', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      );
+      
+      await Supabase.instance.client.from('requests').insert({
+        'user_id': user.id,
+        'user_name': userName,
+        'user_email': userEmail,
+        'request_text': request,
+        'status': 'pendiente',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      
+      Navigator.pop(context);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Solicitud enviada correctamente'),
+          backgroundColor: Color(0xFF1E3A8A),
+        ),
+      );
+      
+    } catch (e) {
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al enviar solicitud: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _updateUserData(BuildContext context, String name, String password, String confirmPassword) async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      // Actualizar nombre si se proporcionó
+      if (name.isNotEmpty) {
+        await Supabase.instance.client
+            .from('users')
+            .update({'name': name})
+            .eq('id', user.id);
+      }
+
+      // Actualizar contraseña si se proporcionó
+      if (password.isNotEmpty) {
+        if (password != confirmPassword) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Las contraseñas no coinciden')),
+          );
+          return;
+        }
+        
+        await Supabase.instance.client.auth.updateUser(
+          UserAttributes(password: password),
+        );
+      }
+
+      Navigator.pop(context);
+      
+      // Refrescar la UI
+      if (context.mounted) {
+        // Forzar rebuild del widget padre
+        (context as Element).markNeedsBuild();
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Datos actualizados correctamente')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Widget _buildProfileTile(IconData icon, String title, {VoidCallback? onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassmorphicContainer(
+        width: double.infinity,
+        height: 70,
+        borderRadius: 12,
+        blur: 10,
+        alignment: Alignment.center,
+        border: 0,
+        linearGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+        borderGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.2),
+            Colors.white.withOpacity(0.1),
+          ],
+        ),
+        child: ListTile(
+          leading: Icon(icon, color: Colors.white70),
+          title: Text(title, style: GoogleFonts.outfit(color: Colors.white)),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white54),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchResultsTab extends StatelessWidget {
+  final String searchQuery;
+  const _SearchResultsTab({required this.searchQuery});
+
+  Future<List<Map<String, dynamic>>> _searchBooks() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .ilike('title', '%$searchQuery%');
+      
+      final response2 = await Supabase.instance.client
+          .from('books')
+          .select()
+          .ilike('author', '%$searchQuery%');
+      
+      final allResults = [...response, ...response2];
+      final uniqueResults = <String, Map<String, dynamic>>{};
+      
+      for (var book in allResults) {
+        uniqueResults[book['id']] = book;
+      }
+      
+      return uniqueResults.values.toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Resultados para "$searchQuery"',
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _searchBooks(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.white));
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.search_off, size: 80, color: Colors.white24),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No se encontraron resultados',
+                          style: GoogleFonts.outfit(fontSize: 18, color: Colors.white54),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final book = snapshot.data![index];
+                    return GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BookDetailScreen(book: book),
+                        ),
+                      ),
+                      child: GlassmorphicContainer(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 8,
+                        blur: 8,
+                        alignment: Alignment.center,
+                        border: 0,
+                        linearGradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.15),
+                            Colors.white.withOpacity(0.08),
+                          ],
+                        ),
+                        borderGradient: LinearGradient(
+                          colors: [
+                            GlassTheme.primaryColor.withOpacity(0.3),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              flex: 4,
+                              child: Container(
+                                margin: const EdgeInsets.all(6),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: book['cover_url'] != null
+                                      ? Image.network(
+                                          book['cover_url'],
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            color: GlassTheme.primaryColor.withOpacity(0.2),
+                                            child: const Icon(Icons.search, size: 30, color: Colors.white),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: GlassTheme.primaryColor.withOpacity(0.2),
+                                          child: const Icon(Icons.search, size: 30, color: Colors.white),
+                                        ),
+                                ),
+                              ),
+                            ),
+                            Flexible(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      book['title'],
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      book['title'] ?? 'Sin título',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
                                     ),
                                     Text(
-                                      book['author'],
-                                      style: const TextStyle(color: Colors.grey),
+                                      book['author'] ?? 'Autor desconocido',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 8,
+                                        color: Colors.white70,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
                                     ),
                                   ],
                                 ),
@@ -320,56 +2191,106 @@ class _LibraryTabState extends State<_LibraryTab> {
     );
   }
 }
+class _TopBooksTab extends StatefulWidget {
+  const _TopBooksTab({super.key});
 
-class _FavoritesTab extends StatelessWidget {
-  const _FavoritesTab();
+  @override
+  State<_TopBooksTab> createState() => _TopBooksTabState();
+}
+
+class _TopBooksTabState extends State<_TopBooksTab> {
+  
+  Future<List<Map<String, dynamic>>> _loadTopBooks() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('book_stats')
+          .select('book_id, open_count, books(*)')
+          .order('open_count', ascending: false)
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Padding(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.favorite_border, size: 80, color: Colors.grey),
-          SizedBox(height: 16),
-          Text('No tienes favoritos aún', style: TextStyle(fontSize: 18, color: Colors.grey)),
+          Text(
+            'Top 10 Libros Más Leídos',
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadTopBooks(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.white));
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Text('No hay estadísticas disponibles', style: GoogleFonts.outfit(color: Colors.white70)),
+                  );
+                }
+                
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final item = snapshot.data![index];
+                    final book = item['books'];
+                    final openCount = item['open_count'] ?? 0;
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: GlassmorphicContainer(
+                        width: double.infinity,
+                        height: 80,
+                        borderRadius: 12,
+                        blur: 10,
+                        alignment: Alignment.center,
+                        border: 0,
+                        linearGradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.1),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                        ),
+                        borderGradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.2),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: GlassTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            child: Text('${index + 1}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text(book['title'] ?? 'Sin título', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+                          subtitle: Text('${book['author'] ?? 'Autor desconocido'} • $openCount lecturas', style: GoogleFonts.outfit(color: Colors.white70)),
+                          trailing: const Icon(Icons.trending_up, color: Colors.greenAccent),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ProfileTab extends StatelessWidget {
-  const _ProfileTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        children: [
-          CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-          SizedBox(height: 16),
-          Text('Usuario', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          Text('user@biblioteca.com', style: TextStyle(color: Colors.grey)),
-          SizedBox(height: 32),
-          ListTile(
-            leading: Icon(Icons.history),
-            title: Text('Historial de lectura'),
-            trailing: Icon(Icons.arrow_forward_ios),
-          ),
-          ListTile(
-            leading: Icon(Icons.settings),
-            title: Text('Configuración'),
-            trailing: Icon(Icons.arrow_forward_ios),
-          ),
-          ListTile(
-            leading: Icon(Icons.help),
-            title: Text('Ayuda'),
-            trailing: Icon(Icons.arrow_forward_ios),
-          ),
-        ],
-      ),
-    );
-  }
-}

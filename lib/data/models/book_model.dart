@@ -1,40 +1,72 @@
-class Book {
+class BookModel {
   final String id;
   final String title;
   final String author;
-  final String description;
-  final String coverUrl;
+  final String? description;
+  final String? coverUrl;
   final String fileUrl;
-  final BookFormat format;
-  final DateTime publishedDate;
-  final List<String> categories;
+  final String? format;
+  final List<String>? categories;
+  final DateTime? publishedDate;
+  final DateTime? createdAt;
+  final String? createdBy;
+  final String? category;
+  final String? isbn;
+  final int? year;
 
-  Book({
+  BookModel({
     required this.id,
     required this.title,
     required this.author,
-    required this.description,
-    required this.coverUrl,
+    this.description,
+    this.coverUrl,
     required this.fileUrl,
-    required this.format,
-    required this.publishedDate,
-    required this.categories,
+    this.format,
+    this.categories,
+    this.publishedDate,
+    this.createdAt,
+    this.createdBy,
+    this.category,
+    this.isbn,
+    this.year,
   });
 
-  factory Book.fromJson(Map<String, dynamic> json) {
-    return Book(
+  factory BookModel.fromJson(Map<String, dynamic> json) {
+    return BookModel(
       id: json['id'],
       title: json['title'],
       author: json['author'],
       description: json['description'],
-      coverUrl: json['coverUrl'],
-      fileUrl: json['fileUrl'],
-      format: BookFormat.values.firstWhere(
-        (e) => e.toString().split('.').last == json['format'],
-      ),
-      publishedDate: DateTime.parse(json['publishedDate']),
-      categories: List<String>.from(json['categories']),
+      coverUrl: json['cover_url'],
+      fileUrl: json['file_url'],
+      format: json['format'],
+      categories: json['categories'] != null ? List<String>.from(json['categories']) : null,
+      publishedDate: json['published_date'] != null ? DateTime.parse(json['published_date']) : null,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      createdBy: json['created_by'],
+      category: json['category'],
+      isbn: json['isbn'],
+      year: json['year'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'author': author,
+      'description': description,
+      'cover_url': coverUrl,
+      'file_url': fileUrl,
+      'format': format,
+      'categories': categories,
+      'published_date': publishedDate?.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
+      'created_by': createdBy,
+      'category': category,
+      'isbn': isbn,
+      'year': year,
+    };
   }
 }
 
