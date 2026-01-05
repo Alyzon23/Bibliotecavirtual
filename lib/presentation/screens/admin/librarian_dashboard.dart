@@ -79,8 +79,9 @@ class _LibrarianDashboardState extends State<LibrarianDashboard> {
                     child: ListView(
                       children: [
                         _buildMenuItem(Icons.library_books, 'Gestión Libros', 0),
-                        _buildMenuItem(Icons.video_library, 'Gestión Videos', 1),
-                        _buildMenuItem(Icons.analytics, 'Estadísticas', 2),
+                        _buildMenuItem(Icons.add_box, 'Agregar Contenido', 1),
+                        _buildMenuItem(Icons.video_library, 'Gestión Videos', 2),
+                        _buildMenuItem(Icons.analytics, 'Estadísticas', 3),
                       ],
                     ),
                   ),
@@ -105,6 +106,7 @@ class _LibrarianDashboardState extends State<LibrarianDashboard> {
                 index: _selectedIndex,
                 children: const [
                   _LibrarianBooksTab(),
+                  _LibrarianAddContentTab(),
                   _LibrarianVideosTab(),
                   _LibrarianStatsTab(),
                 ],
@@ -136,8 +138,14 @@ class _LibrarianDashboardState extends State<LibrarianDashboard> {
 }
 
 // Tabs específicas para bibliotecario
-class _LibrarianBooksTab extends StatelessWidget {
+class _LibrarianBooksTab extends StatefulWidget {
   const _LibrarianBooksTab();
+
+  @override
+  State<_LibrarianBooksTab> createState() => _LibrarianBooksTabState();
+}
+
+class _LibrarianBooksTabState extends State<_LibrarianBooksTab> {
 
   @override
   Widget build(BuildContext context) {
@@ -151,10 +159,16 @@ class _LibrarianBooksTab extends StatelessWidget {
             children: [
               Text('Gestión de Libros', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
               ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddBookScreen()),
-                ),
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AddBookScreen()),
+                  );
+                  if (result == true) {
+                    // Refresh books list
+                    if (mounted) setState(() {});
+                  }
+                },
                 icon: const Icon(Icons.add),
                 label: const Text('Agregar Libro'),
                 style: ElevatedButton.styleFrom(
@@ -205,6 +219,131 @@ class _LibrarianVideosTab extends StatelessWidget {
           const Expanded(
             child: Center(
               child: Text('Funcionalidad de gestión de videos', style: TextStyle(color: Colors.white70)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibrarianAddContentTab extends StatelessWidget {
+  const _LibrarianAddContentTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Agregar Contenido', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 40),
+          Expanded(
+            child: Row(
+              children: [
+                // Card Agregar Libros
+                Expanded(
+                  child: Container(
+                    height: 300,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AddBookScreen()),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(30),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.library_books, size: 60, color: Colors.white),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Agregar Libros',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Sube archivos PDF o EPUB\ny agrega información\ndel libro',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Card Agregar Videos
+                Expanded(
+                  child: Container(
+                    height: 300,
+                    margin: const EdgeInsets.only(left: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Función en desarrollo')),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(30),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.video_library, size: 60, color: Colors.white),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Agregar Videos',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Agrega videos educativos\ny contenido multimedia\na la biblioteca',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

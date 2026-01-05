@@ -37,11 +37,18 @@ void main() async {
   // Inicializar DI
   DI.init();
   
-  // Poblar base de datos con datos de ejemplo (solo primera vez)
-  await DatabaseSeeder.seedBooks();
-  await DatabaseSeeder.seedVideos();
+  // Seed solo si es necesario (en background)
+  _seedDataInBackground();
   
   runApp(const BibliotecaDigitalApp());
+}
+
+void _seedDataInBackground() async {
+  // Ejecutar en background para no bloquear la UI
+  Future.delayed(const Duration(seconds: 2), () async {
+    await DatabaseSeeder.seedBooks();
+    await DatabaseSeeder.seedVideos();
+  });
 }
 
 class BibliotecaDigitalApp extends StatefulWidget {
@@ -76,16 +83,16 @@ class _BibliotecaDigitalAppState extends State<BibliotecaDigitalApp> {
               .eq('id', user.id)
               .single();
           
+          print('🔍 Debug - Usuario ID: ${user.id}');
+          print('🔍 Debug - Rol encontrado: ${userData['role']}');
+          print('🔍 Debug - Email: ${userData['email']}');
+          
           setState(() {
-            if (userData['role'] == 'admin' || userData['role'] == 'administrador') {
-              _initialScreen = AdminDashboard(authService: authService);
-            } else if (userData['role'] == 'bibliotecario') {
-              _initialScreen = LibrarianDashboard(authService: authService);
-            } else if (userData['role'] == 'profesor') {
-              _initialScreen = TeacherDashboard(authService: authService);
-            } else {
-              _initialScreen = UserHome(authService: authService);
-            }
+            final userRole = userData['role']?.toString().toLowerCase() ?? 'user';
+            print('🔍 Debug - Rol procesado: $userRole');
+            
+            print('➡️ Redirigiendo a UserHome (rol: $userRole)');
+            _initialScreen = UserHome(authService: authService);
             _isCheckingSession = false;
           });
           return;
@@ -94,7 +101,9 @@ class _BibliotecaDigitalAppState extends State<BibliotecaDigitalApp> {
         }
       }
     }
-    setState(() => _isCheckingSession = false);
+    setState(() {
+      _isCheckingSession = false;
+    });
   }
 
   void _setupAuthListener() {

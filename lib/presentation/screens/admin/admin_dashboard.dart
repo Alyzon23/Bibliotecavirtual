@@ -404,8 +404,8 @@ class _VideosTabState extends State<_VideosTab> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: Text('Agregar Video', style: GoogleFonts.outfit(color: Colors.white)),
+        backgroundColor: Colors.white,
+        title: Text('Agregar Video', style: GoogleFonts.outfit(color: Colors.grey[800])),
         content: SizedBox(
           width: 400,
           child: Column(
@@ -413,10 +413,10 @@ class _VideosTabState extends State<_VideosTab> {
             children: [
               TextField(
                 controller: titleController,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: Colors.grey[800]),
                 decoration: InputDecoration(
                   labelText: 'Título del video',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
@@ -428,12 +428,12 @@ class _VideosTabState extends State<_VideosTab> {
               const SizedBox(height: 16),
               TextField(
                 controller: urlController,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: Colors.grey[800]),
                 decoration: InputDecoration(
                   labelText: 'URL del video (YouTube)',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
                   hintText: 'https://www.youtube.com/watch?v=...',
-                  hintStyle: GoogleFonts.outfit(color: Colors.white54),
+                  hintStyle: GoogleFonts.outfit(color: Colors.grey[500]),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
@@ -445,10 +445,10 @@ class _VideosTabState extends State<_VideosTab> {
               const SizedBox(height: 16),
               TextField(
                 controller: categoryController,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: Colors.grey[800]),
                 decoration: InputDecoration(
                   labelText: 'Categoría',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
@@ -461,10 +461,10 @@ class _VideosTabState extends State<_VideosTab> {
               TextField(
                 controller: descriptionController,
                 maxLines: 3,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: Colors.grey[800]),
                 decoration: InputDecoration(
                   labelText: 'Descripción',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
@@ -479,7 +479,7 @@ class _VideosTabState extends State<_VideosTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+            child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.grey[600])),
           ),
           Container(
             decoration: BoxDecoration(

@@ -4,7 +4,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../data/services/supabase_auth_service.dart';
+import '../../../data/services/debug_service.dart';
+import '../../../data/services/cache_service.dart';
 import '../../theme/glass_theme.dart';
 import '../auth/login_screen.dart';
 import '../../../main.dart';
@@ -12,6 +15,11 @@ import 'video_player_screen.dart';
 import 'book_detail_screen.dart';
 import 'simple_video_player.dart';
 import 'youtube_video_player.dart';
+import 'category_filter.dart';
+import 'add_book_dialog.dart';
+import 'add_video_dialog.dart';
+import 'category_books_view.dart';
+import 'category_videos_view.dart';
 
 class UserHome extends StatefulWidget {
   final SupabaseAuthService authService;
@@ -31,6 +39,7 @@ class _UserHomeState extends State<UserHome> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   final ValueNotifier<bool> _searchingNotifier = ValueNotifier<bool>(false);
+  bool _canEdit = false;
 
   @override
   void initState() {
@@ -59,6 +68,8 @@ class _UserHomeState extends State<UserHome> {
           _userName = userData['name'] ?? 'Usuario';
           _userEmail = userData['email'] ?? user.email ?? 'user@biblioteca.com';
           _userRole = userData['role'] ?? 'usuario';
+          final role = userData['role']?.toString().toLowerCase() ?? 'lector';
+          _canEdit = role == 'profesor' || role == 'bibliotecario' || role == 'admin' || role == 'administrador';
         });
       } catch (e) {
         print('Error cargando datos del usuario: $e');
@@ -107,15 +118,21 @@ class _UserHomeState extends State<UserHome> {
       case 0:
         return _HomeTab(searchQuery: _searchQuery);
       case 1:
-        return _LibraryTab(searchQuery: _searchQuery);
+        return _LibraryTab(searchQuery: _searchQuery, canEdit: _canEdit, userRole: _userRole);
       case 2:
-        return _VideosTab(searchQuery: _searchQuery);
+        return _VideosTab(searchQuery: _searchQuery, canEdit: _canEdit, userRole: _userRole);
       case 3:
-        return const _FavoritesTab();
+        return _FavoritesTab(canEdit: _canEdit);
       case 4:
-        return const _ProfileTab();
+        return _ProfileTab(userRole: _userRole);
       case 5:
         return const _TopBooksTab();
+      case 6:
+        return _AddContentTab(canEdit: _canEdit);
+      case 7:
+        return const _UserManagementTab();
+      case 8:
+        return const _RequestsTab();
       default:
         return _HomeTab(searchQuery: _searchQuery);
     }
@@ -244,6 +261,9 @@ class _UserHomeState extends State<UserHome> {
                           _buildMenuItem(Icons.person, 'Perfil', 4),
                           const Divider(color: Colors.white24, height: 32),
                           _buildMenuItem(Icons.trending_up, 'Top 10 Libros', 5),
+                          if (_canEdit) _buildMenuItem(Icons.add, 'Agregar Contenido', 6),
+                          if (_userRole == 'admin' || _userRole == 'administrador') _buildMenuItem(Icons.people, 'Gestión de Usuarios', 7),
+                          if (_userRole == 'admin' || _userRole == 'administrador') _buildMenuItem(Icons.help_center, 'Solicitudes', 8),
                           _buildMenuItem(Icons.settings, 'Configuración', -1, onTap: () {
                             // Cambiar a pestaña de perfil
                             setState(() => _selectedIndex = 4);
@@ -524,42 +544,15 @@ class _HomeTab extends StatelessWidget {
   const _HomeTab({this.searchQuery = ''});
 
   Future<List<Map<String, dynamic>>> _loadTopBooks() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('book_stats')
-          .select('book_id, open_count, books(*)')
-          .order('open_count', ascending: false)
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return await CacheService.getTopBooks();
   }
 
   Future<List<Map<String, dynamic>>> _loadRecentBooks() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('books')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return await CacheService.getRecentBooks();
   }
 
   Future<List<Map<String, dynamic>>> _loadRecentVideos() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('videos')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return await CacheService.getRecentVideos();
   }
 
   void _openVideo(BuildContext context, Map<String, dynamic> video) {
@@ -1016,47 +1009,41 @@ class _HomeTab extends StatelessWidget {
   }
 }
 
-class _LibraryTab extends StatelessWidget {
+class _LibraryTab extends StatefulWidget {
   final String searchQuery;
-  const _LibraryTab({this.searchQuery = ''});
+  final bool canEdit;
+  final String userRole;
+  const _LibraryTab({this.searchQuery = '', required this.canEdit, required this.userRole});
+
+  @override
+  State<_LibraryTab> createState() => _LibraryTabState();
+}
+
+class _LibraryTabState extends State<_LibraryTab> {
+  String? selectedCategory;
+  bool showCategoryAccordion = false;
+  
+  final categories = {
+    'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
+    'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
+    'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
+    'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
+    'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
+  };
   
   Future<List<Map<String, dynamic>>> _loadTopBooks() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('book_stats')
-          .select('book_id, open_count, books(*)')
-          .order('open_count', ascending: false)
-          .limit(10);
-      return response.map((item) => item['books'] as Map<String, dynamic>).toList();
-    } catch (e) {
-      return [];
-    }
+    final topBooks = await CacheService.getTopBooks();
+    return topBooks.map((item) => item['books'] as Map<String, dynamic>).toList();
   }
   
   Future<List<Map<String, dynamic>>> _loadRecentBooks() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('books')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return await CacheService.getRecentBooks();
   }
   
   Future<List<Map<String, dynamic>>> _loadSuggestions() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('books')
-          .select()
-          .order('title')
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    // Usar datos en caché para sugerencias
+    final recent = await CacheService.getRecentBooks();
+    return recent.take(5).toList();
   }
 
   Widget _buildBookList(List<Map<String, dynamic>> books, BuildContext context) {
@@ -1077,87 +1064,123 @@ class _LibraryTab extends StatelessWidget {
                 return Container(
                   width: 160,
                   margin: const EdgeInsets.only(right: 16),
-                  child: GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BookDetailScreen(book: book),
-                      ),
-                    ),
-                    child: GlassmorphicContainer(
-                      width: double.infinity,
-                      height: double.infinity,
-                      borderRadius: 12,
-                      blur: 10,
-                      alignment: Alignment.center,
-                      border: 0,
-                      linearGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                      ),
-                      borderGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.2),
-                          Colors.white.withOpacity(0.1),
-                        ],
-                      ),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 120,
-                              child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                child: book['cover_url'] != null
-                                    ? Image.network(
-                                        book['cover_url'],
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
-                                      )
-                                    : const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
-                              ),
-                            ),
-                            Container(
-                              height: 60,
-                              padding: const EdgeInsets.all(6),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      book['title'] ?? 'Sin título',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                  child: Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookDetailScreen(book: book),
+                          ),
+                        ),
+                        child: GlassmorphicContainer(
+                          width: double.infinity,
+                          height: double.infinity,
+                          borderRadius: 12,
+                          blur: 10,
+                          alignment: Alignment.center,
+                          border: 0,
+                          linearGradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.1),
+                              Colors.white.withOpacity(0.05),
+                            ],
+                          ),
+                          borderGradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.2),
+                              Colors.white.withOpacity(0.1),
+                            ],
+                          ),
+                          child: IntrinsicHeight(
+                            child: Column(
+                              children: [
+                                Container(
+                                  height: 120,
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                    child: book['cover_url'] != null
+                                        ? Image.network(
+                                            book['cover_url'],
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
+                                          )
+                                        : const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
                                   ),
-                                  Flexible(
-                                    child: Text(
-                                      book['author'] ?? 'Autor desconocido',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 8,
-                                        color: Colors.white70,
+                                ),
+                                Container(
+                                  height: 60,
+                                  padding: const EdgeInsets.all(6),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          book['title'] ?? 'Sin título',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      Flexible(
+                                        child: Text(
+                                          book['author'] ?? 'Autor desconocido',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 8,
+                                            color: Colors.white70,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                      if (widget.canEdit && (widget.userRole == 'bibliotecario' || widget.userRole == 'admin'))
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: PopupMenuButton<String>(
+                            icon: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.more_vert, color: Colors.white, size: 16),
+                            ),
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                _editBook(context, book);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Editar'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
@@ -1174,11 +1197,77 @@ class _LibraryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (selectedCategory != null) {
+      return CategoryBooksView(
+        category: selectedCategory!,
+        onBack: () => setState(() => selectedCategory = null),
+        canEdit: widget.canEdit,
+        userRole: widget.userRole,
+      );
+    }
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Botón de categorías
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                showCategoryAccordion = !showCategoryAccordion;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.category, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Categorías',
+                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Acordeón de categorías
+          if (showCategoryAccordion)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: categories.keys.map((category) {
+                  return ListTile(
+                    title: Text(category, style: GoogleFonts.outfit(color: Colors.white)),
+                    onTap: () {
+                      setState(() {
+                        selectedCategory = category;
+                        showCategoryAccordion = false;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          
+          const SizedBox(height: 32),
+          
           // Top 10 Libros
           Text(
             'Top 10 Libros',
@@ -1243,49 +1332,181 @@ class _LibraryTab extends StatelessWidget {
       ),
     );
   }
+
+  void _editBook(BuildContext context, Map<String, dynamic> book) {
+    final titleController = TextEditingController(text: book['title']);
+    final authorController = TextEditingController(text: book['author']);
+    final coverUrlController = TextEditingController(text: book['cover_url']);
+    final isbnController = TextEditingController(text: book['isbn']);
+    final yearController = TextEditingController(text: book['year']?.toString());
+    final descriptionController = TextEditingController(text: book['description']);
+    
+    String selectedCategory = book['category'] ?? 'Desarrollo de Software';
+    String selectedSubcategory = book['subcategory'] ?? '';
+    
+    final categories = {
+      'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
+      'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
+      'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
+      'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
+      'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
+    };
+    
+    if (selectedSubcategory.isEmpty || !categories[selectedCategory]!.contains(selectedSubcategory)) {
+      selectedSubcategory = categories[selectedCategory]!.first;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Editar: ${book['title']}'),
+          content: SizedBox(
+            width: 500,
+            height: 600,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Título'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: authorController,
+                    decoration: const InputDecoration(labelText: 'Autor'),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                    items: categories.keys.map((category) {
+                      return DropdownMenuItem(value: category, child: Text(category));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCategory = value!;
+                        selectedSubcategory = categories[value]!.first;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(selectedCategory),
+                    value: selectedSubcategory,
+                    decoration: const InputDecoration(labelText: 'Subcategoría'),
+                    items: categories[selectedCategory]!.map((subcategory) {
+                      return DropdownMenuItem(value: subcategory, child: Text(subcategory));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedSubcategory = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: coverUrlController,
+                    decoration: const InputDecoration(labelText: 'URL de portada'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: isbnController,
+                    decoration: const InputDecoration(labelText: 'ISBN'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: yearController,
+                    decoration: const InputDecoration(labelText: 'Año de publicación'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: 'Descripción'),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await Supabase.instance.client
+                      .from('books')
+                      .update({
+                        'title': titleController.text,
+                        'author': authorController.text,
+                        'category': selectedCategory,
+                        'subcategory': selectedSubcategory,
+                        'cover_url': coverUrlController.text,
+                        'isbn': isbnController.text,
+                        'year': int.tryParse(yearController.text),
+                        'description': descriptionController.text,
+                      })
+                      .eq('id', book['id']);
+                  
+                  Navigator.pop(context);
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Libro actualizado correctamente')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 }
 
-class _VideosTab extends StatelessWidget {
+class _VideosTab extends StatefulWidget {
   final String searchQuery;
-  const _VideosTab({this.searchQuery = ''});
+  final bool canEdit;
+  final String userRole;
+  const _VideosTab({this.searchQuery = '', required this.canEdit, required this.userRole});
+
+  @override
+  State<_VideosTab> createState() => _VideosTabState();
+}
+
+class _VideosTabState extends State<_VideosTab> {
+  String? selectedCategory;
+  bool showCategoryAccordion = false;
+  
+  final categories = {
+    'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
+    'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
+    'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
+    'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
+    'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
+  };
 
   Future<List<Map<String, dynamic>>> _loadTopVideos() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('videos')
-          .select()
-          .order('views', ascending: false)
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return await CacheService.getRecentVideos(); // Usar caché de videos recientes
   }
   
   Future<List<Map<String, dynamic>>> _loadRecentVideos() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('videos')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return await CacheService.getRecentVideos();
   }
   
   Future<List<Map<String, dynamic>>> _loadRecommendedVideos() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('videos')
-          .select()
-          .order('title')
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    // Usar datos en caché para recomendaciones
+    final recent = await CacheService.getRecentVideos();
+    return recent.take(3).toList();
   }
 
   Widget _buildVideoList(List<Map<String, dynamic>> videos, BuildContext context) {
@@ -1306,103 +1527,139 @@ class _VideosTab extends StatelessWidget {
                 return Container(
                   width: 280,
                   margin: const EdgeInsets.only(right: 16),
-                  child: GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => YouTubeVideoPlayer(video: video),
-                      ),
-                    ),
-                    child: GlassmorphicContainer(
-                      width: double.infinity,
-                      height: double.infinity,
-                      borderRadius: 12,
-                      blur: 10,
-                      alignment: Alignment.center,
-                      border: 0,
-                      linearGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                      ),
-                      borderGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.2),
-                          Colors.white.withOpacity(0.1),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                              child: video['thumbnail_url'] != null
-                                  ? Image.network(
-                                      video['thumbnail_url'],
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        color: Colors.grey.shade800,
-                                        child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
-                                      ),
-                                    )
-                                  : Container(
-                                      color: Colors.grey.shade800,
-                                      child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
-                                    ),
-                            ),
+                  child: Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => YouTubeVideoPlayer(video: video),
                           ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      video['title'] ?? 'Sin título',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Flexible(
-                                    child: Text(
-                                      video['category'] ?? 'Sin categoría',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 10,
-                                        color: Colors.white70,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (video['views'] != null)
-                                    Flexible(
-                                      child: Text(
-                                        '${video['views']} vistas',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 9,
-                                          color: Colors.white54,
+                        ),
+                        child: GlassmorphicContainer(
+                          width: double.infinity,
+                          height: double.infinity,
+                          borderRadius: 12,
+                          blur: 10,
+                          alignment: Alignment.center,
+                          border: 0,
+                          linearGradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.1),
+                              Colors.white.withOpacity(0.05),
+                            ],
+                          ),
+                          borderGradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.2),
+                              Colors.white.withOpacity(0.1),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                  child: video['thumbnail_url'] != null
+                                      ? Image.network(
+                                          video['thumbnail_url'],
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            color: Colors.grey.shade800,
+                                            child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: Colors.grey.shade800,
+                                          child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                ],
+                                ),
                               ),
-                            ),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          video['title'] ?? 'Sin título',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Flexible(
+                                        child: Text(
+                                          video['category'] ?? 'Sin categoría',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 10,
+                                            color: Colors.white70,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (video['views'] != null)
+                                        Flexible(
+                                          child: Text(
+                                            '${video['views']} vistas',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 9,
+                                              color: Colors.white54,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (widget.canEdit && (widget.userRole == 'bibliotecario' || widget.userRole == 'admin'))
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: PopupMenuButton<String>(
+                            icon: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.more_vert, color: Colors.white, size: 16),
+                            ),
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                _editVideo(context, video);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Editar'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
@@ -1417,13 +1674,200 @@ class _VideosTab extends StatelessWidget {
     );
   }
 
+  void _editVideo(BuildContext context, Map<String, dynamic> video) {
+    final titleController = TextEditingController(text: video['title'] ?? '');
+    final thumbnailController = TextEditingController(text: video['thumbnail_url'] ?? '');
+    final descriptionController = TextEditingController(text: video['description'] ?? '');
+    
+    String selectedCategory = video['category'] ?? 'Desarrollo de Software';
+    String selectedSubcategory = video['subcategory'] ?? 'Frontend';
+    
+    final categories = {
+      'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
+      'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
+      'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
+      'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
+      'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
+    };
+    
+    if (!categories.containsKey(selectedCategory)) {
+      selectedCategory = 'Desarrollo de Software';
+    }
+    if (!categories[selectedCategory]!.contains(selectedSubcategory)) {
+      selectedSubcategory = categories[selectedCategory]!.first;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Editar: ${video['title']}'),
+          content: SizedBox(
+            width: 500,
+            height: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Título'),
+                    controller: titleController,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'URL de miniatura'),
+                    controller: thumbnailController,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                    items: categories.keys.map((category) {
+                      return DropdownMenuItem(value: category, child: Text(category));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCategory = value!;
+                        selectedSubcategory = categories[value]!.first;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(selectedCategory),
+                    value: selectedSubcategory,
+                    decoration: const InputDecoration(labelText: 'Subcategoría'),
+                    items: categories[selectedCategory]!.map((subcategory) {
+                      return DropdownMenuItem(value: subcategory, child: Text(subcategory));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedSubcategory = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Descripción'),
+                    controller: descriptionController,
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await Supabase.instance.client
+                      .from('videos')
+                      .update({
+                        'title': titleController.text,
+                        'thumbnail_url': thumbnailController.text,
+                        'category': selectedCategory,
+                        'subcategory': selectedSubcategory,
+                        'description': descriptionController.text,
+                      })
+                      .eq('id', video['id']);
+                  
+                  Navigator.pop(context);
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Video actualizado correctamente')),
+                  );
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    if (selectedCategory != null) {
+      return CategoryVideosView(
+        category: selectedCategory!,
+        onBack: () => setState(() => selectedCategory = null),
+        canEdit: widget.canEdit,
+        userRole: widget.userRole,
+      );
+    }
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Botón de categorías
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                showCategoryAccordion = !showCategoryAccordion;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.category, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Categorías',
+                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Acordeón de categorías
+          if (showCategoryAccordion)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: categories.keys.map((category) {
+                  return ListTile(
+                    title: Text(category, style: GoogleFonts.outfit(color: Colors.white)),
+                    onTap: () {
+                      setState(() {
+                        selectedCategory = category;
+                        showCategoryAccordion = false;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          
+          const SizedBox(height: 32),
+          
           // Top 10 Videos
           Text(
             'Top 10 Videos',
@@ -1491,7 +1935,8 @@ class _VideosTab extends StatelessWidget {
 }
 
 class _FavoritesTab extends StatelessWidget {
-  const _FavoritesTab();
+  final bool canEdit;
+  const _FavoritesTab({required this.canEdit});
 
   Future<List<Map<String, dynamic>>> _loadFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
@@ -1639,7 +2084,8 @@ class _FavoritesTab extends StatelessWidget {
 }
 
 class _ProfileTab extends StatelessWidget {
-  const _ProfileTab();
+  final String userRole;
+  const _ProfileTab({required this.userRole});
 
   @override
   Widget build(BuildContext context) {
@@ -2201,16 +2647,7 @@ class _TopBooksTab extends StatefulWidget {
 class _TopBooksTabState extends State<_TopBooksTab> {
   
   Future<List<Map<String, dynamic>>> _loadTopBooks() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('book_stats')
-          .select('book_id, open_count, books(*)')
-          .order('open_count', ascending: false)
-          .limit(10);
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return await CacheService.getTopBooks();
   }
 
   @override
@@ -2294,3 +2731,313 @@ class _TopBooksTabState extends State<_TopBooksTab> {
   }
 }
 
+
+class _AddContentTab extends StatelessWidget {
+  final bool canEdit;
+  const _AddContentTab({required this.canEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!canEdit) {
+      return const Center(
+        child: Text('No tienes permisos para agregar contenido', 
+                   style: TextStyle(color: Colors.white70)),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Agregar Contenido',
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (context) => const AddBookDialog(),
+                  ),
+                  child: Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.library_books, size: 64, color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Agregar Libros',
+                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (context) => const AddVideoDialog(),
+                  ),
+                  child: Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.video_library, size: 64, color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Agregar Videos',
+                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddBookDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Agregar Libro'),
+        content: SizedBox(
+          width: 500,
+          height: 600,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Título *'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Autor *'),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: 'Desarrollo de Software',
+                  decoration: const InputDecoration(labelText: 'Categoría'),
+                  items: const [
+                    DropdownMenuItem(value: 'Desarrollo de Software', child: Text('Desarrollo de Software')),
+                    DropdownMenuItem(value: 'Marketing', child: Text('Marketing')),
+                    DropdownMenuItem(value: 'Guía Nacional de Turismo', child: Text('Guía Nacional de Turismo')),
+                    DropdownMenuItem(value: 'Arte Culinaria', child: Text('Arte Culinaria')),
+                    DropdownMenuItem(value: 'Idiomas', child: Text('Idiomas')),
+                  ],
+                  onChanged: (value) {},
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: 'Frontend',
+                  decoration: const InputDecoration(labelText: 'Subcategoría'),
+                  items: const [
+                    DropdownMenuItem(value: 'Frontend', child: Text('Frontend')),
+                    DropdownMenuItem(value: 'Backend', child: Text('Backend')),
+                    DropdownMenuItem(value: 'Móvil', child: Text('Móvil')),
+                    DropdownMenuItem(value: 'Base de Datos', child: Text('Base de Datos')),
+                  ],
+                  onChanged: (value) {},
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'URL de portada'),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: const InputDecoration(labelText: 'URL del archivo'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('O'),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        try {
+                          final result = await FilePicker.platform.pickFiles(
+                            type: FileType.custom,
+                            allowedExtensions: ['pdf', 'epub'],
+                          );
+                          
+                          if (result != null && result.files.single.bytes != null) {
+                            final file = result.files.first;
+                            final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+                            
+                            // Subir archivo a Supabase Storage
+                            final response = await Supabase.instance.client.storage
+                                .from('books')
+                                .uploadBinary(fileName, file.bytes!);
+                            
+                            // Obtener URL pública
+                            final publicUrl = Supabase.instance.client.storage
+                                .from('books')
+                                .getPublicUrl(fileName);
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Archivo subido: ${file.name}')),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      },
+                      child: const Text('Subir archivo'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: 'PDF',
+                  decoration: const InputDecoration(labelText: 'Formato'),
+                  items: const [
+                    DropdownMenuItem(value: 'PDF', child: Text('PDF')),
+                    DropdownMenuItem(value: 'EPUB', child: Text('EPUB')),
+                  ],
+                  onChanged: (value) {},
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'ISBN'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Año de publicación'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Descripción'),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddVideoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Agregar Video'),
+        content: SizedBox(
+          width: 500,
+          height: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Título del video *'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'URL del video *'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'URL de miniatura'),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: 'Desarrollo de Software',
+                  decoration: const InputDecoration(labelText: 'Categoría'),
+                  items: const [
+                    DropdownMenuItem(value: 'Desarrollo de Software', child: Text('Desarrollo de Software')),
+                    DropdownMenuItem(value: 'Marketing', child: Text('Marketing')),
+                    DropdownMenuItem(value: 'Guía Nacional de Turismo', child: Text('Guía Nacional de Turismo')),
+                    DropdownMenuItem(value: 'Arte Culinaria', child: Text('Arte Culinaria')),
+                    DropdownMenuItem(value: 'Idiomas', child: Text('Idiomas')),
+                  ],
+                  onChanged: (value) {},
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: 'Frontend',
+                  decoration: const InputDecoration(labelText: 'Subcategoría'),
+                  items: const [
+                    DropdownMenuItem(value: 'Frontend', child: Text('Frontend')),
+                    DropdownMenuItem(value: 'Backend', child: Text('Backend')),
+                    DropdownMenuItem(value: 'Móvil', child: Text('Móvil')),
+                    DropdownMenuItem(value: 'Base de Datos', child: Text('Base de Datos')),
+                  ],
+                  onChanged: (value) {},
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Descripción'),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UserManagementTab extends StatelessWidget {
+  const _UserManagementTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Gestión de Usuarios', style: TextStyle(color: Colors.white)),
+    );
+  }
+}
+
+class _RequestsTab extends StatelessWidget {
+  const _RequestsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Solicitudes', style: TextStyle(color: Colors.white)),
+    );
+  }
+}

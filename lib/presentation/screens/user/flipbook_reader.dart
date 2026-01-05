@@ -599,14 +599,17 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: color, size: 24),
-        onPressed: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.white.withOpacity(0.3)),
+        ),
+        child: Icon(icon, color: color, size: 24),
       ),
     );
   }
@@ -618,13 +621,7 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
           Expanded(
             flex: 2,
             child: GestureDetector(
-              onTap: () {
-                if (_currentPage > 1) {
-                  setState(() {
-                    _currentPage--;
-                  });
-                }
-              },
+              onTap: _previousPage,
               child: Container(
                 color: Colors.transparent,
                 child: _currentPage > 1
@@ -659,17 +656,17 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
               ),
             ),
           ),
-          const Expanded(flex: 4, child: SizedBox()),
+          Expanded(
+            flex: 4, 
+            child: GestureDetector(
+              onTap: _toggleControls,
+              child: Container(color: Colors.transparent),
+            ),
+          ),
           Expanded(
             flex: 2,
             child: GestureDetector(
-              onTap: () {
-                if (_document != null && _currentPage < _document!.pages.length) {
-                  setState(() {
-                    _currentPage++;
-                  });
-                }
-              },
+              onTap: _nextPage,
               child: Container(
                 color: Colors.transparent,
                 child: _document != null && _currentPage < _document!.pages.length

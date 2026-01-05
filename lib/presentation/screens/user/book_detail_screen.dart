@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/glass_theme.dart';
+import '../../../data/services/debug_service.dart';
 import 'simple_book_reader.dart';
 import 'flipbook_reader.dart';
 
@@ -19,12 +20,40 @@ class BookDetailScreen extends StatefulWidget {
 class _BookDetailScreenState extends State<BookDetailScreen> {
   bool _isFavorite = false;
   bool _isLoading = false;
+  String _createdByInfo = 'Cargando...';
 
   @override
   void initState() {
     super.initState();
     _checkFavoriteStatus();
     _incrementViewCount();
+    _loadCreatedByInfo();
+  }
+
+  Future<void> _loadCreatedByInfo() async {
+    if (widget.book['created_by'] != null) {
+      try {
+        final userData = await Supabase.instance.client
+            .from('users')
+            .select('name, role')
+            .eq('id', widget.book['created_by'])
+            .single();
+        
+        setState(() {
+          final name = userData['name'] ?? 'Usuario';
+          final role = userData['role'] ?? 'usuario';
+          _createdByInfo = '$name ($role)';
+        });
+      } catch (e) {
+        setState(() {
+          _createdByInfo = 'Sistema';
+        });
+      }
+    } else {
+      setState(() {
+        _createdByInfo = 'Sistema';
+      });
+    }
   }
 
   Future<void> _checkFavoriteStatus() async {
@@ -54,6 +83,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       return;
     }
 
+    // Debug info antes de cambiar favorito
+    print('🔄 === ANTES DE CAMBIAR FAVORITO ===');
+    await DebugService.debugUserInfo();
     print('🔄 Toggling favorite for book: ${widget.book['id']}, user: ${user.id}');
     setState(() => _isLoading = true);
 
@@ -80,6 +112,10 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       setState(() {
         _isFavorite = !_isFavorite;
       });
+      
+      // Debug info después de cambiar favorito
+      print('🔄 === DESPUÉS DE CAMBIAR FAVORITO ===');
+      await DebugService.debugUserInfo();
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -322,7 +358,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                                     const SizedBox(height: 8),
                                     _buildInfoRow(Icons.qr_code, 'ISBN', widget.book['isbn'] ?? 'N/A'),
                                     const SizedBox(height: 8),
-                                    _buildInfoRow(Icons.person, 'Subido por', widget.book['created_by'] ?? 'Sistema'),
+                                    _buildInfoRow(Icons.person, 'Subido por', _createdByInfo),
                                     const SizedBox(height: 8),
                                     _buildInfoRow(Icons.category, 'Categoría', widget.book['category'] ?? 'General'),
                                     const SizedBox(height: 8),

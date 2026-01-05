@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../data/services/supabase_auth_service.dart';
+import '../../../data/services/test_users_service.dart';
 import '../../theme/glass_theme.dart';
-import '../admin/admin_dashboard.dart';
 import '../user/user_home.dart';
+import '../admin/librarian_dashboard.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,9 +22,46 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = SupabaseAuthService();
   bool _isLoading = false;
   bool _rememberMe = false;
+  bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_email');
+    final savedPassword = prefs.getString('saved_password');
+    final rememberMe = prefs.getBool('remember_me') ?? false;
+    
+    if (rememberMe && savedEmail != null && savedPassword != null) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _passwordController.text = savedPassword;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('saved_email', _emailController.text);
+      await prefs.setString('saved_password', _passwordController.text);
+      await prefs.setBool('remember_me', true);
+    } else {
+      await prefs.remove('saved_email');
+      await prefs.remove('saved_password');
+      await prefs.setBool('remember_me', false);
+    }
+  }
 
   Future<void> _login() async {
     setState(() => _isLoading = true);
+    
+    await _saveCredentials();
     
     final success = await _authService.login(
       _emailController.text,
@@ -32,14 +71,27 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => _authService.isAdmin 
-            ? AdminDashboard(authService: _authService)
-            : UserHome(authService: _authService),
-        ),
-      );
+      // Obtener el rol del usuario para redirigir correctamente
+      final userRole = _authService.currentUser?.role.toString().split('.').last ?? 'lector';
+      print('🔍 Debug - Rol encontrado: $userRole');
+      
+      if (userRole == 'bibliotecario') {
+        print('➡️ Redirigiendo a LibrarianDashboard');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LibrarianDashboard(authService: _authService),
+          ),
+        );
+      } else {
+        print('➡️ Redirigiendo a UserHome (rol: $userRole)');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UserHome(authService: _authService),
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Credenciales incorrectas')),
@@ -290,6 +342,17 @@ class _LoginScreenState extends State<LoginScreen> {
             labelText: 'Contraseña',
             labelStyle: GoogleFonts.outfit(color: Colors.white70),
             prefixIcon: const Icon(Icons.lock, color: Colors.white70),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                color: Colors.white70,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
             filled: true,
             fillColor: Colors.white.withOpacity(0.1),
             border: OutlineInputBorder(
@@ -301,7 +364,7 @@ class _LoginScreenState extends State<LoginScreen> {
               borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
             ),
           ),
-          obscureText: true,
+          obscureText: _obscurePassword,
           onSubmitted: (_) => _login(),
         ),
         const SizedBox(height: 16),

@@ -18,12 +18,24 @@ class _AddBookScreenState extends State<AddBookScreen> {
   final _descriptionController = TextEditingController();
   final _fileUrlController = TextEditingController();
   final _coverUrlController = TextEditingController();
+  final _isbnController = TextEditingController();
+  final _yearController = TextEditingController();
   
   PlatformFile? _selectedFile;
   PlatformFile? _selectedCover;
   
   String _selectedFormat = 'pdf';
+  String _selectedCategory = 'Desarrollo de Software';
+  String _selectedSubcategory = 'Frontend';
   bool _isLoading = false;
+
+  final Map<String, List<String>> _categories = {
+    'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
+    'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
+    'Guía Nacional de Turismo': ['Destinos', 'Hoteles', 'Restaurantes', 'Actividades'],
+    'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
+    'Idioma': ['Inglés', 'Francés', 'Alemán', 'Portugués'],
+  };
 
   Future<void> _pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -110,11 +122,15 @@ class _AddBookScreenState extends State<AddBookScreen> {
       await Supabase.instance.client.from('books').insert({
         'title': _titleController.text,
         'author': _authorController.text,
-        'description': _descriptionController.text,
+        'description': _descriptionController.text.isEmpty ? null : _descriptionController.text,
         'file_url': fileUrl,
         'cover_url': coverUrl,
+        'isbn': _isbnController.text.isEmpty ? null : _isbnController.text,
+        'year': _yearController.text.isEmpty ? null : int.tryParse(_yearController.text),
         'format': _selectedFormat,
-        'categories': ['General'],
+        'category': _selectedCategory,
+        'subcategory': _selectedSubcategory,
+        'categories': [_selectedCategory],
         'published_date': DateTime.now().toIso8601String().split('T')[0],
         'created_by': Supabase.instance.client.auth.currentUser?.id,
       });
@@ -182,7 +198,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Detalles del Libro', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('Detalles del Libro', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey[800])),
                   const SizedBox(height: 24),
                   _buildTextField(controller: _titleController, label: 'Título *', icon: Icons.title),
                   const SizedBox(height: 16),
@@ -209,7 +225,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                   if (_selectedFile != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text('Archivo: ${_selectedFile!.name}', style: GoogleFonts.outfit(color: Colors.greenAccent)),
+                      child: Text('Archivo: ${_selectedFile!.name}', style: GoogleFonts.outfit(color: Colors.green[700])),
                     ),
                   
                   const SizedBox(height: 16),
@@ -232,32 +248,109 @@ class _AddBookScreenState extends State<AddBookScreen> {
                   if (_selectedCover != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text('Portada: ${_selectedCover!.name}', style: GoogleFonts.outfit(color: Colors.greenAccent)),
+                      child: Text('Portada: ${_selectedCover!.name}', style: GoogleFonts.outfit(color: Colors.green[700])),
                     ),
                   
                   const SizedBox(height: 16),
                   
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          controller: _isbnController, 
+                          label: 'ISBN', 
+                          icon: Icons.qr_code
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTextField(
+                          controller: _yearController, 
+                          label: 'Año de publicación', 
+                          icon: Icons.calendar_today
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
                   DropdownButtonFormField<String>(
-                    value: _selectedFormat,
-                    dropdownColor: const Color(0xFF1E293B),
-                    style: GoogleFonts.outfit(color: Colors.white),
+                    value: _selectedCategory,
+                    dropdownColor: Colors.white,
+                    style: GoogleFonts.outfit(color: Colors.grey[800]),
                     decoration: InputDecoration(
-                      labelText: 'Formato',
-                      labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                      labelText: 'Categoría',
+                      labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: GlassTheme.primaryColor),
                       ),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
+                      fillColor: Colors.white.withOpacity(0.9),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'pdf', child: Text('PDF')),
-                      DropdownMenuItem(value: 'epub', child: Text('EPUB')),
+                    items: _categories.keys.map((category) => 
+                      DropdownMenuItem(value: category, child: Text(category, style: GoogleFonts.outfit(color: Colors.grey[800])))
+                    ).toList(),
+                    onChanged: (value) => setState(() {
+                      _selectedCategory = value!;
+                      _selectedSubcategory = _categories[value]!.first;
+                    }),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  DropdownButtonFormField<String>(
+                    value: _selectedSubcategory,
+                    dropdownColor: Colors.white,
+                    style: GoogleFonts.outfit(color: Colors.grey[800]),
+                    decoration: InputDecoration(
+                      labelText: 'Subcategoría',
+                      labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: GlassTheme.primaryColor),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.9),
+                    ),
+                    items: _categories[_selectedCategory]!.map((subcategory) => 
+                      DropdownMenuItem(value: subcategory, child: Text(subcategory, style: GoogleFonts.outfit(color: Colors.grey[800])))
+                    ).toList(),
+                    onChanged: (value) => setState(() => _selectedSubcategory = value!),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  DropdownButtonFormField<String>(
+                    value: _selectedFormat,
+                    dropdownColor: Colors.white,
+                    style: GoogleFonts.outfit(color: Colors.grey[800]),
+                    decoration: InputDecoration(
+                      labelText: 'Formato',
+                      labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: GlassTheme.primaryColor),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.9),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: 'pdf', child: Text('PDF', style: GoogleFonts.outfit(color: Colors.grey[800]))),
+                      DropdownMenuItem(value: 'epub', child: Text('EPUB', style: GoogleFonts.outfit(color: Colors.grey[800]))),
                     ],
                     onChanged: (value) => setState(() => _selectedFormat = value!),
                   ),
@@ -300,23 +393,23 @@ class _AddBookScreenState extends State<AddBookScreen> {
     return TextField(
       controller: controller,
       maxLines: maxLines,
-      style: GoogleFonts.outfit(color: Colors.white),
+      style: GoogleFonts.outfit(color: Colors.grey[800]),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.outfit(color: Colors.white70),
+        labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
         hintText: hintText,
-        hintStyle: GoogleFonts.outfit(color: Colors.white30),
-        prefixIcon: Icon(icon, color: Colors.white70),
+        hintStyle: GoogleFonts.outfit(color: Colors.grey[500]),
+        prefixIcon: Icon(icon, color: Colors.grey[600]),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+          borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: GlassTheme.primaryColor),
         ),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.white.withOpacity(0.9),
       ),
     );
   }
