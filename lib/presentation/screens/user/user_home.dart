@@ -20,6 +20,7 @@ import 'add_book_dialog.dart';
 import 'add_video_dialog.dart';
 import 'category_books_view.dart';
 import 'category_videos_view.dart';
+import 'users_management_screen.dart';
 
 class UserHome extends StatefulWidget {
   final SupabaseAuthService authService;
@@ -1164,6 +1165,40 @@ class _LibraryTabState extends State<_LibraryTab> {
                             onSelected: (value) {
                               if (value == 'edit') {
                                 _editBook(context, book);
+                              } else if (value == 'delete' && widget.userRole == 'admin') {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: const Color(0xFF1E293B),
+                                    title: Text('Eliminar libro', style: GoogleFonts.outfit(color: Colors.white)),
+                                    content: Text('¿Seguro que quieres eliminar este libro?', style: GoogleFonts.outfit(color: Colors.white70)),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.pop(context);
+                                          try {
+                                            await Supabase.instance.client.from('books').delete().eq('id', book['id']);
+                                            // Limpiar caché de libros
+                                            CacheService.clearBooksCache();
+                                            setState(() {});
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Libro eliminado correctamente', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error al eliminar: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
+                                            );
+                                          }
+                                        },
+                                        child: Text('Eliminar', style: GoogleFonts.outfit(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
                               }
                             },
                             itemBuilder: (context) => [
@@ -1177,6 +1212,17 @@ class _LibraryTabState extends State<_LibraryTab> {
                                   ],
                                 ),
                               ),
+                              if (widget.userRole == 'admin')
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete, size: 16, color: Colors.red),
+                                      SizedBox(width: 8),
+                                      Text('Eliminar', style: TextStyle(color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -1643,6 +1689,44 @@ class _VideosTabState extends State<_VideosTab> {
                             onSelected: (value) {
                               if (value == 'edit') {
                                 _editVideo(context, video);
+                              } else if (value == 'delete' && widget.userRole == 'admin') {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: const Color(0xFF1E293B),
+                                    title: Text('Eliminar video', style: GoogleFonts.outfit(color: Colors.white)),
+                                    content: Text('¿Seguro que quieres eliminar este video?', style: GoogleFonts.outfit(color: Colors.white70)),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.pop(context);
+                                          try {
+                                            await Supabase.instance.client.from('videos').delete().eq('id', video['id']);
+                                            // Limpiar caché de videos
+                                            CacheService.clearVideosCache();
+                                            if (mounted) {
+                                              setState(() {});
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Video eliminado correctamente', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Error al eliminar: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        child: Text('Eliminar', style: GoogleFonts.outfit(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
                               }
                             },
                             itemBuilder: (context) => [
@@ -1656,6 +1740,17 @@ class _VideosTabState extends State<_VideosTab> {
                                   ],
                                 ),
                               ),
+                              if (widget.userRole == 'admin')
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete, size: 16, color: Colors.red),
+                                      SizedBox(width: 8),
+                                      Text('Eliminar', style: TextStyle(color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -2083,9 +2178,15 @@ class _FavoritesTab extends StatelessWidget {
   }
 }
 
-class _ProfileTab extends StatelessWidget {
+class _ProfileTab extends StatefulWidget {
   final String userRole;
   const _ProfileTab({required this.userRole});
+
+  @override
+  State<_ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<_ProfileTab> {
 
   @override
   Widget build(BuildContext context) {
@@ -2329,8 +2430,15 @@ class _ProfileTab extends StatelessWidget {
   void _sendRequest(String request, BuildContext context) async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        print('❌ No hay usuario autenticado');
+        return;
+      }
       
+      print('📤 Enviando solicitud: $request');
+      print('👤 Usuario ID: ${user.id}');
+      
+      // Obtener datos del usuario
       final userData = await Supabase.instance.client
           .from('users')
           .select('name, email')
@@ -2340,41 +2448,33 @@ class _ProfileTab extends StatelessWidget {
       final userName = userData['name'] ?? 'Usuario';
       final userEmail = userData['email'] ?? user.email ?? 'usuario@yavirac.edu.ec';
       
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          backgroundColor: Color(0xFF1E293B),
-          content: Row(
-            children: [
-              CircularProgressIndicator(color: Color(0xFF1E3A8A)),
-              SizedBox(width: 16),
-              Text('Enviando solicitud...', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
-      );
-      
-      await Supabase.instance.client.from('requests').insert({
+      final response = await Supabase.instance.client.from('requests').insert({
         'user_id': user.id,
         'user_name': userName,
         'user_email': userEmail,
         'request_text': request,
         'status': 'pendiente',
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      }).select();
       
-      Navigator.pop(context);
+      print('✅ Respuesta: $response');
+      
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ Solicitud enviada correctamente'),
-          backgroundColor: Color(0xFF1E3A8A),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
         ),
       );
       
     } catch (e) {
-      if (Navigator.canPop(context)) Navigator.pop(context);
+      print('💥 Error enviando solicitud: $e');
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -2413,12 +2513,7 @@ class _ProfileTab extends StatelessWidget {
       }
 
       Navigator.pop(context);
-      
-      // Refrescar la UI
-      if (context.mounted) {
-        // Forzar rebuild del widget padre
-        (context as Element).markNeedsBuild();
-      }
+      setState(() {}); // Actualizar UI
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Datos actualizados correctamente')),
@@ -3025,19 +3120,206 @@ class _UserManagementTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Gestión de Usuarios', style: TextStyle(color: Colors.white)),
-    );
+    return const UsersManagementScreen();
   }
 }
 
-class _RequestsTab extends StatelessWidget {
+class _RequestsTab extends StatefulWidget {
   const _RequestsTab();
 
   @override
+  State<_RequestsTab> createState() => _RequestsTabState();
+}
+
+class _RequestsTabState extends State<_RequestsTab> {
+
+  @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Solicitudes', style: TextStyle(color: Colors.white)),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Solicitudes de Soporte',
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadRequests(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.white));
+                }
+                
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text('No hay solicitudes', style: GoogleFonts.outfit(color: Colors.white70)));
+                }
+                
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final request = snapshot.data![index];
+                    final isResolved = request['status'] == 'resuelto';
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: GlassmorphicContainer(
+                        width: double.infinity,
+                        height: 100,
+                        borderRadius: 12,
+                        blur: 10,
+                        alignment: Alignment.center,
+                        border: 0,
+                        linearGradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            (isResolved ? Colors.green : Colors.orange).withOpacity(0.1),
+                            (isResolved ? Colors.green : Colors.orange).withOpacity(0.05),
+                          ],
+                        ),
+                        borderGradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.2),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: isResolved ? Colors.green : Colors.orange,
+                            child: Icon(
+                              isResolved ? Icons.check : Icons.help_outline,
+                              color: Colors.white,
+                            ),
+                          ),
+                          title: Text(request['title'] ?? 'Solicitud', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${request['user_name'] ?? 'Usuario'} • ${request['type'] ?? 'ayuda'}'.toUpperCase(), style: GoogleFonts.outfit(color: Colors.white70)),
+                              Text(isResolved ? 'RESUELTO' : 'PENDIENTE', style: GoogleFonts.outfit(color: isResolved ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.visibility, color: Colors.white70),
+                                onPressed: () => _showRequestDetails(context, request),
+                              ),
+                              if (!isResolved)
+                                IconButton(
+                                  icon: const Icon(Icons.check_circle, color: Colors.green),
+                                  onPressed: () => _markAsResolved(context, request['id'].toString()),
+                                ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteRequest(context, request['id'].toString()),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Future<List<Map<String, dynamic>>> _loadRequests() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('requests')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  void _showRequestDetails(BuildContext context, Map<String, dynamic> request) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: Text(request['title'] ?? 'Solicitud', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Usuario: ${request['user_name'] ?? 'Desconocido'}', style: GoogleFonts.outfit(color: Colors.white70)),
+              Text('Email: ${request['user_email'] ?? 'No disponible'}', style: GoogleFonts.outfit(color: Colors.white70)),
+              const SizedBox(height: 16),
+              Text('Descripción:', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(request['request_text'] ?? request['description'] ?? 'Sin descripción', style: GoogleFonts.outfit(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cerrar', style: GoogleFonts.outfit(color: Colors.white70)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _markAsResolved(BuildContext context, String requestId) async {
+    try {
+      await Supabase.instance.client
+          .from('requests')
+          .update({'status': 'resuelto'})
+          .eq('id', requestId);
+      
+      setState(() {}); // Actualizar UI
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✅ Solicitud marcada como resuelta', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _deleteRequest(BuildContext context, String requestId) async {
+    try {
+      await Supabase.instance.client
+          .from('requests')
+          .delete()
+          .eq('id', requestId);
+      
+      setState(() {}); // Actualizar UI
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('🗑️ Solicitud eliminada', style: GoogleFonts.outfit()), backgroundColor: Colors.orange),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
+      );
+    }
   }
 }

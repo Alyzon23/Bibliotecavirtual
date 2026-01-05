@@ -6,6 +6,7 @@ import '../../../data/services/supabase_auth_service.dart';
 import '../../../data/services/test_users_service.dart';
 import '../../theme/glass_theme.dart';
 import '../user/user_home.dart';
+import '../admin/admin_dashboard.dart';
 import '../admin/librarian_dashboard.dart';
 import 'register_screen.dart';
 
@@ -75,7 +76,15 @@ class _LoginScreenState extends State<LoginScreen> {
       final userRole = _authService.currentUser?.role.toString().split('.').last ?? 'lector';
       print('🔍 Debug - Rol encontrado: $userRole');
       
-      if (userRole == 'bibliotecario') {
+      if (userRole == 'admin') {
+        print('➡️ Redirigiendo a UserHome con permisos admin');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UserHome(authService: _authService),
+          ),
+        );
+      } else if (userRole == 'bibliotecario') {
         print('➡️ Redirigiendo a LibrarianDashboard');
         Navigator.pushReplacement(
           context,

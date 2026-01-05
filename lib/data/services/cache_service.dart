@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../data/services/cache_service.dart';
 
 class CacheService {
   static final Map<String, dynamic> _cache = {};
@@ -80,5 +81,17 @@ class CacheService {
   static void clearCache() {
     _cache.clear();
     _cacheTimestamps.clear();
+  }
+
+  static void clearBooksCache() {
+    _cache.remove('recent_books');
+    _cache.remove('top_books');
+    _cacheTimestamps.remove('recent_books');
+    _cacheTimestamps.remove('top_books');
+  }
+
+  static void clearVideosCache() {
+    _cache.remove('recent_videos');
+    _cacheTimestamps.remove('recent_videos');
   }
 }
