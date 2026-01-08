@@ -32,6 +32,12 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
     'Idioma': ['Inglés', 'Francés', 'Alemán', 'Portugués'],
   };
 
+  String _extractYouTubeId(String url) {
+    final regExp = RegExp(r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)');
+    final match = regExp.firstMatch(url);
+    return match?.group(1) ?? url;
+  }
+
   Future<void> _addVideo() async {
     if (_titleController.text.isEmpty || _urlController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -45,7 +51,7 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
     try {
       await Supabase.instance.client.from('videos').insert({
         'title': _titleController.text,
-        'url': _urlController.text,
+        'video_id': _urlController.text,
         'thumbnail_url': _thumbnailController.text.isEmpty ? null : _thumbnailController.text,
         'description': _descriptionController.text.isEmpty ? null : _descriptionController.text,
         'category': _selectedCategory,

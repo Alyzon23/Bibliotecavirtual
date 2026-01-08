@@ -23,7 +23,7 @@ class _SimpleVideoPlayerState extends State<SimpleVideoPlayer> {
   }
 
   void _registerVideoElement() {
-    final videoUrl = widget.video['video_url'] ?? widget.video['url'] ?? '';
+    final videoUrl = widget.video['video_id'] ?? '';
     
     // Crear elemento de video HTML
     final videoElement = html.VideoElement()
