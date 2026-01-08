@@ -72,17 +72,21 @@ class _FuturisticButtonState extends State<FuturisticButton> with SingleTickerPr
                 )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     if (widget.icon != null) ...[
-                      Icon(widget.icon, size: 20),
-                      const SizedBox(width: 8),
+                      Icon(widget.icon, size: 18),
+                      const SizedBox(width: 6),
                     ],
-                    Text(
-                      widget.text,
-                      style: GoogleFonts.outfit(
-                        fontSize: 16, 
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+                    Flexible(
+                      child: Text(
+                        widget.text,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

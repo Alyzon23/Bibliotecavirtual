@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:glassmorphism/glassmorphism.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,26 +7,19 @@ import '../../theme/glass_theme.dart';
 import '../../widgets/futuristic_widgets.dart';
 import '../../../data/services/cache_service.dart';
 
-class AddBookScreen extends StatefulWidget {
-  const AddBookScreen({super.key});
+class AddVideoScreen extends StatefulWidget {
+  const AddVideoScreen({super.key});
 
   @override
-  State<AddBookScreen> createState() => _AddBookScreenState();
+  State<AddVideoScreen> createState() => _AddVideoScreenState();
 }
 
-class _AddBookScreenState extends State<AddBookScreen> {
+class _AddVideoScreenState extends State<AddVideoScreen> {
   final _titleController = TextEditingController();
-  final _authorController = TextEditingController();
+  final _urlController = TextEditingController();
+  final _thumbnailController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _fileUrlController = TextEditingController();
-  final _coverUrlController = TextEditingController();
-  final _isbnController = TextEditingController();
-  final _yearController = TextEditingController();
   
-  PlatformFile? _selectedFile;
-  PlatformFile? _selectedCover;
-  
-  String _selectedFormat = 'pdf';
   String _selectedCategory = 'Desarrollo de Software';
   String _selectedSubcategory = 'Frontend';
   bool _isLoading = false;
@@ -41,44 +32,10 @@ class _AddBookScreenState extends State<AddBookScreen> {
     'Idioma': ['Inglés', 'Francés', 'Alemán', 'Portugués'],
   };
 
-  Future<void> _pickFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'epub'],
-    );
-
-    if (result != null) {
-      setState(() {
-        _selectedFile = result.files.single;
-        _fileUrlController.text = 'Archivo seleccionado: ${_selectedFile!.name}';
-      });
-    }
-  }
-
-  Future<void> _pickCover() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-    );
-
-    if (result != null) {
-      setState(() {
-        _selectedCover = result.files.single;
-        _coverUrlController.text = 'Imagen seleccionada: ${_selectedCover!.name}';
-      });
-    }
-  }
-
-  Future<void> _addBook() async {
-    if (_titleController.text.isEmpty || _authorController.text.isEmpty) {
+  Future<void> _addVideo() async {
+    if (_titleController.text.isEmpty || _urlController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa título y autor')),
-      );
-      return;
-    }
-
-    if (_fileUrlController.text.isEmpty && _selectedFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Agrega URL o selecciona archivo')),
+        const SnackBar(content: Text('Completa título y URL del video')),
       );
       return;
     }
@@ -86,66 +43,22 @@ class _AddBookScreenState extends State<AddBookScreen> {
     setState(() => _isLoading = true);
 
     try {
-      String? fileUrl;
-      String? coverUrl;
-
-      // Subir archivo si es local
-      if (_selectedFile != null) {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_')}.$_selectedFormat';
-        
-        if (_selectedFile!.bytes != null) {
-          await Supabase.instance.client.storage
-              .from('books')
-              .uploadBinary(fileName, _selectedFile!.bytes!);
-          
-          fileUrl = Supabase.instance.client.storage
-              .from('books')
-              .getPublicUrl(fileName);
-        }
-      } else {
-        fileUrl = _fileUrlController.text;
-      }
-
-      // Subir portada si es local
-      if (_selectedCover != null) {
-        final coverName = '${DateTime.now().millisecondsSinceEpoch}_cover_${_titleController.text.replaceAll(' ', '_')}.jpg';
-        
-        if (_selectedCover!.bytes != null) {
-          await Supabase.instance.client.storage
-              .from('covers')
-              .uploadBinary(coverName, _selectedCover!.bytes!);
-          
-          coverUrl = Supabase.instance.client.storage
-              .from('covers')
-              .getPublicUrl(coverName);
-        }
-      } else if (_coverUrlController.text.isNotEmpty && !_coverUrlController.text.contains('seleccionada')) {
-        coverUrl = _coverUrlController.text;
-      }
-
-      await Supabase.instance.client.from('books').insert({
+      await Supabase.instance.client.from('videos').insert({
         'title': _titleController.text,
-        'author': _authorController.text,
+        'url': _urlController.text,
+        'thumbnail_url': _thumbnailController.text.isEmpty ? null : _thumbnailController.text,
         'description': _descriptionController.text.isEmpty ? null : _descriptionController.text,
-        'file_url': fileUrl,
-        'cover_url': coverUrl,
-        'isbn': _isbnController.text.isEmpty ? null : _isbnController.text,
-        'year': _yearController.text.isEmpty ? null : int.tryParse(_yearController.text),
-        'format': _selectedFormat,
         'category': _selectedCategory,
         'subcategory': _selectedSubcategory,
-        'categories': [_selectedCategory],
-        'published_date': DateTime.now().toIso8601String().split('T')[0],
         'created_by': Supabase.instance.client.auth.currentUser?.id,
       });
 
       if (mounted) {
-        // Limpiar caché para actualizar las listas
-        CacheService.clearBooksCache();
+        CacheService.clearVideosCache();
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Libro agregado exitosamente', style: GoogleFonts.outfit()),
+            content: Text('Video agregado exitosamente', style: GoogleFonts.outfit()),
             backgroundColor: GlassTheme.successColor,
           ),
         );
@@ -221,7 +134,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'AGREGAR LIBRO',
+                    'AGREGAR VIDEO',
                     style: GoogleFonts.orbitron(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -230,7 +143,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                     ),
                   ),
                   Text(
-                    'Expande la biblioteca digital',
+                    'Enriquece el contenido multimedia',
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       color: Colors.white70,
@@ -248,7 +161,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                   color: AppColors.yaviracOrange.withOpacity(0.5),
                 ),
               ),
-              child: const Icon(Icons.library_books, color: Colors.white, size: 30),
+              child: const Icon(Icons.video_library, color: Colors.white, size: 30),
             ),
           ],
         ),
@@ -285,17 +198,13 @@ class _AddBookScreenState extends State<AddBookScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Información Básica', Icons.info_outline),
+            _buildSectionTitle('Información del Video', Icons.info_outline),
             const SizedBox(height: 20),
-            _buildBasicInfo(),
+            _buildVideoInfo(),
             const SizedBox(height: 30),
-            _buildSectionTitle('Archivos', Icons.cloud_upload),
+            _buildSectionTitle('Contenido Multimedia', Icons.play_circle_outline),
             const SizedBox(height: 20),
-            _buildFileSection(),
-            const SizedBox(height: 30),
-            _buildSectionTitle('Detalles', Icons.tune),
-            const SizedBox(height: 20),
-            _buildDetailsSection(),
+            _buildMediaSection(),
             const SizedBox(height: 30),
             _buildSectionTitle('Categorización', Icons.category),
             const SizedBox(height: 20),
@@ -333,114 +242,46 @@ class _AddBookScreenState extends State<AddBookScreen> {
     );
   }
 
-  Widget _buildBasicInfo() {
+  Widget _buildVideoInfo() {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildInput(_titleController, 'Título', Icons.title, 0),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildInput(_authorController, 'Autor', Icons.person_outline, 100),
-            ),
-          ],
-        ),
+        _buildInput(_titleController, 'Título del Video', Icons.video_library, 0),
         const SizedBox(height: 16),
-        _buildInput(_descriptionController, 'Descripción', Icons.description_outlined, 200, maxLines: 3),
+        _buildInput(_descriptionController, 'Descripción', Icons.description_outlined, 100, maxLines: 3),
       ],
     );
   }
 
-  Widget _buildFileSection() {
+  Widget _buildMediaSection() {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: _buildInput(_fileUrlController, 'URL del archivo (PDF/EPUB)', Icons.link, 300),
-            ),
-            const SizedBox(width: 12),
-            _buildFileButton('ARCHIVO', Icons.folder_open, _pickFile),
-          ],
-        ),
+        _buildInput(_urlController, 'URL del Video (YouTube, Vimeo, etc.)', Icons.link, 200),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: _buildInput(_coverUrlController, 'URL de la portada', Icons.image_outlined, 400),
-            ),
-            const SizedBox(width: 12),
-            _buildFileButton('PORTADA', Icons.photo_library, _pickCover),
-          ],
-        ),
-        if (_selectedFile != null || _selectedCover != null)
-          Container(
-            margin: const EdgeInsets.only(top: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.yaviracOrange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.yaviracOrange.withOpacity(0.3),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_selectedFile != null)
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle, color: AppColors.yaviracOrange, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Archivo: ${_selectedFile!.name}',
-                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                if (_selectedCover != null)
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle, color: AppColors.yaviracOrange, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Portada: ${_selectedCover!.name}',
-                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+        _buildInput(_thumbnailController, 'URL de Miniatura (opcional)', Icons.image_outlined, 300),
+        Container(
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.yaviracOrange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.yaviracOrange.withOpacity(0.3),
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _buildDetailsSection() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildInput(_isbnController, 'ISBN', Icons.qr_code, 500),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildInput(_yearController, 'Año', Icons.calendar_today_outlined, 600, keyboardType: TextInputType.number),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildDropdown(
-            _selectedFormat,
-            'Formato',
-            ['pdf', 'epub'],
-            (value) => setState(() => _selectedFormat = value!),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: AppColors.yaviracOrange, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Soporta enlaces de YouTube, Vimeo y otros servicios de video',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -474,7 +315,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
     );
   }
 
-  Widget _buildInput(TextEditingController controller, String label, IconData icon, int delay, {int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _buildInput(TextEditingController controller, String label, IconData icon, int delay, {int maxLines = 1}) {
     return FadeInLeft(
       delay: Duration(milliseconds: delay),
       child: Container(
@@ -494,7 +335,6 @@ class _AddBookScreenState extends State<AddBookScreen> {
         child: TextField(
           controller: controller,
           maxLines: maxLines,
-          keyboardType: keyboardType,
           style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
           decoration: InputDecoration(
             labelText: label,
@@ -511,48 +351,6 @@ class _AddBookScreenState extends State<AddBookScreen> {
               borderSide: BorderSide(color: AppColors.yaviracOrange, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFileButton(String text, IconData icon, VoidCallback onPressed) {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        gradient: AppColors.sidebarGradient,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.yaviracOrange.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  text,
-                  style: GoogleFonts.orbitron(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -605,7 +403,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
   Widget _buildSubmitButton() {
     return Center(
       child: FadeInUp(
-        delay: const Duration(milliseconds: 700),
+        delay: const Duration(milliseconds: 400),
         child: Container(
           width: 300,
           height: 55,
@@ -623,7 +421,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: _isLoading ? null : _addBook,
+              onTap: _isLoading ? null : _addVideo,
               borderRadius: BorderRadius.circular(15),
               child: Center(
                 child: _isLoading
@@ -631,10 +429,10 @@ class _AddBookScreenState extends State<AddBookScreen> {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.add_circle_outline, color: Colors.white),
+                          const Icon(Icons.video_library, color: Colors.white),
                           const SizedBox(width: 12),
                           Text(
-                            'AGREGAR LIBRO',
+                            'AGREGAR VIDEO',
                             style: GoogleFonts.orbitron(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

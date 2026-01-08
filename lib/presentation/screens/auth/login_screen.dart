@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../data/services/supabase_auth_service.dart';
 import '../../../data/services/test_users_service.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../theme/glass_theme.dart';
 import '../../widgets/futuristic_widgets.dart';
 import '../user/user_home.dart';
@@ -125,9 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFF0F0C29).withOpacity(0.8),
-                const Color(0xFF302B63).withOpacity(0.6),
-                const Color(0xFF24243e).withOpacity(0.8),
+                AppColors.yaviracBlue.withOpacity(0.8),
+                AppColors.yaviracBlueDark.withOpacity(0.6),
+                AppColors.yaviracBlue.withOpacity(0.8),
               ],
             ),
           ),

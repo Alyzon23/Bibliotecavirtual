@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../data/services/supabase_auth_service.dart';
 import '../../../data/services/cache_service.dart';
 import '../../../core/services/lazy_loading_service.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../theme/glass_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../auth/login_screen.dart';
@@ -16,6 +17,8 @@ import 'book_detail_screen.dart';
 import 'youtube_video_player.dart';
 import 'add_book_dialog.dart';
 import 'add_video_dialog.dart';
+import '../admin/add_book_screen.dart';
+import '../admin/add_video_screen.dart';
 import 'category_books_view.dart';
 import 'category_videos_view.dart';
 import 'users_management_screen.dart';
@@ -143,14 +146,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1E3A8A), // Azul Yavirac
-              Color(0xFF3B82F6), // Azul más claro
-            ],
-          ),
+          gradient: AppColors.primaryGradient,
         ),
         child: Row(
           children: [
@@ -167,8 +163,8 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF1E3A8A).withOpacity(0.9), // Azul Yavirac
-                    const Color(0xFF1D4ED8).withOpacity(0.95), // Azul institucional
+                    AppColors.yaviracBlueDark.withOpacity(0.9),
+                    AppColors.yaviracOrange.withOpacity(0.95),
                   ],
                 ),
                 borderGradient: LinearGradient(
@@ -187,63 +183,84 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           children: [
-                            // Avatar con gradiente
+                            // Logo del instituto
                             Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)], // Azul Yavirac
-                                ),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF1E3A8A).withOpacity(0.3), // Azul Yavirac
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                                  style: GoogleFonts.poppins(
+                              width: 60,
+                              height: 60,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.asset(
+                                  'assets/images/yavirac.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.school,
                                     color: Colors.white,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
+                                    size: 30,
                                   ),
                                 ),
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Text(
-                              _userName,
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF1E3A8A), Color(0xFFFFFFFF)], // Azul y blanco Yavirac
+                            // Info del usuario
+                            Row(
+                              children: [
+                                // Avatar con inicial
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: AppColors.avatarGradient,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      AppColors.avatarShadow,
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                _userRole.toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                  color: _userRole == 'admin' ? Colors.white : const Color(0xFF1E3A8A), // Blanco para admin, azul para usuario
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 1,
+                                const SizedBox(width: 12),
+                                // Nombre y rol
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _userName,
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          gradient: AppColors.roleGradient,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          _userRole.toUpperCase(),
+                                          style: GoogleFonts.poppins(
+                                            color: AppColors.getRoleTextColor(_userRole),
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),
@@ -302,16 +319,10 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                           width: double.infinity,
                           height: 50,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF1E3A8A), Color(0xFFFFFFFF)], // Azul y blanco Yavirac
-                            ),
+                            gradient: AppColors.logoutGradient,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFF093FB).withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
-                              ),
+                              AppColors.logoutShadow,
                             ],
                           ),
                           child: Material(
@@ -496,9 +507,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          gradient: isSelected ? const LinearGradient(
-            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)], // Azul Yavirac
-          ) : null,
+          gradient: isSelected ? AppColors.menuItemGradient : null,
           borderRadius: BorderRadius.circular(16),
           border: isSelected ? null : Border.all(
             color: Colors.white.withOpacity(0.1),
@@ -568,16 +577,10 @@ class _HomeTab extends StatelessWidget {
         width: double.infinity,
         height: 200,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-          ),
+          gradient: AppColors.primaryGradient,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E3A8A).withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
+            AppColors.primaryShadow,
           ],
         ),
         child: Padding(
@@ -937,7 +940,6 @@ class _LibraryTabState extends State<_LibraryTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Botón de categorías
           GestureDetector(
             onTap: () {
               setState(() {
@@ -947,46 +949,142 @@ class _LibraryTabState extends State<_LibraryTab> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.yaviracOrange.withOpacity(0.2),
+                    AppColors.yaviracBlueDark.withOpacity(0.2),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                border: Border.all(
+                  color: AppColors.yaviracOrange.withOpacity(0.4),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.yaviracOrange.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.category, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Categorías',
-                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.avatarGradient,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.category, color: Colors.white, size: 20),
                   ),
-                  const Spacer(),
-                  Icon(
-                    showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.white,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Explorar Categorías',
+                      style: GoogleFonts.orbitron(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: AppColors.yaviracOrange,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          
-          // Acordeón de categorías
           if (showCategoryAccordion)
             Container(
-              margin: const EdgeInsets.only(top: 8),
+              margin: const EdgeInsets.only(top: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.yaviracOrange.withOpacity(0.3),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
               child: Column(
                 children: categories.keys.map((category) {
-                  return ListTile(
-                    title: Text(category, style: GoogleFonts.outfit(color: Colors.white)),
-                    onTap: () {
-                      setState(() {
-                        selectedCategory = category;
-                        showCategoryAccordion = false;
-                      });
-                    },
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            selectedCategory = category;
+                            showCategoryAccordion = false;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.yaviracOrange.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(Icons.folder, color: Colors.white, size: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  category,
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                color: AppColors.yaviracOrange,
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   );
                 }).toList(),
               ),
@@ -1587,7 +1685,6 @@ class _VideosTabState extends State<_VideosTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Botón de categorías
           GestureDetector(
             onTap: () {
               setState(() {
@@ -1597,46 +1694,142 @@ class _VideosTabState extends State<_VideosTab> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.yaviracOrange.withOpacity(0.2),
+                    AppColors.yaviracBlueDark.withOpacity(0.2),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                border: Border.all(
+                  color: AppColors.yaviracOrange.withOpacity(0.4),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.yaviracOrange.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.category, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Categorías',
-                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.avatarGradient,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.category, color: Colors.white, size: 20),
                   ),
-                  const Spacer(),
-                  Icon(
-                    showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.white,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Explorar Categorías',
+                      style: GoogleFonts.orbitron(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: AppColors.yaviracOrange,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          
-          // Acordeón de categorías
           if (showCategoryAccordion)
             Container(
-              margin: const EdgeInsets.only(top: 8),
+              margin: const EdgeInsets.only(top: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.yaviracOrange.withOpacity(0.3),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
               child: Column(
                 children: categories.keys.map((category) {
-                  return ListTile(
-                    title: Text(category, style: GoogleFonts.outfit(color: Colors.white)),
-                    onTap: () {
-                      setState(() {
-                        selectedCategory = category;
-                        showCategoryAccordion = false;
-                      });
-                    },
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            selectedCategory = category;
+                            showCategoryAccordion = false;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.yaviracOrange.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(Icons.folder, color: Colors.white, size: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  category,
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                color: AppColors.yaviracOrange,
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   );
                 }).toList(),
               ),
@@ -2535,9 +2728,11 @@ class _AddContentTab extends StatelessWidget {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (context) => const AddBookDialog(),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddBookScreen(),
+                    ),
                   ),
                   child: Container(
                     height: 200,
@@ -2564,9 +2759,11 @@ class _AddContentTab extends StatelessWidget {
               const SizedBox(width: 24),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (context) => const AddVideoDialog(),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddVideoScreen(),
+                    ),
                   ),
                   child: Container(
                     height: 200,
@@ -2596,204 +2793,6 @@ class _AddContentTab extends StatelessWidget {
       ),
     );
   }
-
-  void _showAddBookDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar Libro'),
-        content: SizedBox(
-          width: 500,
-          height: 600,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Título *'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Autor *'),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: 'Desarrollo de Software',
-                  decoration: const InputDecoration(labelText: 'Categoría'),
-                  items: const [
-                    DropdownMenuItem(value: 'Desarrollo de Software', child: Text('Desarrollo de Software')),
-                    DropdownMenuItem(value: 'Marketing', child: Text('Marketing')),
-                    DropdownMenuItem(value: 'Guía Nacional de Turismo', child: Text('Guía Nacional de Turismo')),
-                    DropdownMenuItem(value: 'Arte Culinaria', child: Text('Arte Culinaria')),
-                    DropdownMenuItem(value: 'Idiomas', child: Text('Idiomas')),
-                  ],
-                  onChanged: (value) {},
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: 'Frontend',
-                  decoration: const InputDecoration(labelText: 'Subcategoría'),
-                  items: const [
-                    DropdownMenuItem(value: 'Frontend', child: Text('Frontend')),
-                    DropdownMenuItem(value: 'Backend', child: Text('Backend')),
-                    DropdownMenuItem(value: 'Móvil', child: Text('Móvil')),
-                    DropdownMenuItem(value: 'Base de Datos', child: Text('Base de Datos')),
-                  ],
-                  onChanged: (value) {},
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'URL de portada'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: const InputDecoration(labelText: 'URL del archivo'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('O'),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          final result = await FilePicker.platform.pickFiles(
-                            type: FileType.custom,
-                            allowedExtensions: ['pdf', 'epub'],
-                          );
-                          
-                          if (result != null && result.files.single.bytes != null) {
-                            final file = result.files.first;
-                            final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-                            
-                            // Subir archivo a Supabase Storage
-                            final response = await Supabase.instance.client.storage
-                                .from('books')
-                                .uploadBinary(fileName, file.bytes!);
-                            
-                            // Obtener URL pública
-                            final publicUrl = Supabase.instance.client.storage
-                                .from('books')
-                                .getPublicUrl(fileName);
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Archivo subido: ${file.name}')),
-                            );
-                          }
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        }
-                      },
-                      child: const Text('Subir archivo'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: 'PDF',
-                  decoration: const InputDecoration(labelText: 'Formato'),
-                  items: const [
-                    DropdownMenuItem(value: 'PDF', child: Text('PDF')),
-                    DropdownMenuItem(value: 'EPUB', child: Text('EPUB')),
-                  ],
-                  onChanged: (value) {},
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'ISBN'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Año de publicación'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Descripción'),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddVideoDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar Video'),
-        content: SizedBox(
-          width: 500,
-          height: 400,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Título del video *'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'URL del video *'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'URL de miniatura'),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: 'Desarrollo de Software',
-                  decoration: const InputDecoration(labelText: 'Categoría'),
-                  items: const [
-                    DropdownMenuItem(value: 'Desarrollo de Software', child: Text('Desarrollo de Software')),
-                    DropdownMenuItem(value: 'Marketing', child: Text('Marketing')),
-                    DropdownMenuItem(value: 'Guía Nacional de Turismo', child: Text('Guía Nacional de Turismo')),
-                    DropdownMenuItem(value: 'Arte Culinaria', child: Text('Arte Culinaria')),
-                    DropdownMenuItem(value: 'Idiomas', child: Text('Idiomas')),
-                  ],
-                  onChanged: (value) {},
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: 'Frontend',
-                  decoration: const InputDecoration(labelText: 'Subcategoría'),
-                  items: const [
-                    DropdownMenuItem(value: 'Frontend', child: Text('Frontend')),
-                    DropdownMenuItem(value: 'Backend', child: Text('Backend')),
-                    DropdownMenuItem(value: 'Móvil', child: Text('Móvil')),
-                    DropdownMenuItem(value: 'Base de Datos', child: Text('Base de Datos')),
-                  ],
-                  onChanged: (value) {},
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Descripción'),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _UserManagementTab extends StatelessWidget {
@@ -2813,6 +2812,27 @@ class _RequestsTab extends StatefulWidget {
 }
 
 class _RequestsTabState extends State<_RequestsTab> {
+  late Stream<List<Map<String, dynamic>>> _requestsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeStream();
+  }
+
+  void _initializeStream() {
+    _requestsStream = Supabase.instance.client
+        .from('requests')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .map((data) => List<Map<String, dynamic>>.from(data));
+  }
+
+  void _refreshStream() {
+    setState(() {
+      _initializeStream();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2828,11 +2848,7 @@ class _RequestsTabState extends State<_RequestsTab> {
           const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: Supabase.instance.client
-                  .from('requests')
-                  .stream(primaryKey: ['id'])
-                  .order('created_at', ascending: false)
-                  .map((data) => List<Map<String, dynamic>>.from(data)),
+              stream: _requestsStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(color: Colors.white));
@@ -2978,6 +2994,7 @@ class _RequestsTabState extends State<_RequestsTab> {
           .eq('id', requestId);
       
       // StreamBuilder se actualiza automáticamente, no necesita setState
+      _refreshStream();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ Solicitud marcada como resuelta', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
       );
@@ -2996,6 +3013,7 @@ class _RequestsTabState extends State<_RequestsTab> {
           .eq('id', requestId);
       
       // StreamBuilder se actualiza automáticamente, no necesita setState
+      _refreshStream();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('🗑️ Solicitud eliminada', style: GoogleFonts.outfit()), backgroundColor: Colors.orange),
       );

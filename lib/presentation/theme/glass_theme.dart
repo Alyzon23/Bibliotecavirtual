@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme/app_colors.dart';
 
 class GlassTheme {
-  static const Color primaryColor = Color(0xFF00D4FF);
-  static const Color secondaryColor = Color(0xFF7C3AED);
-  static const Color accentColor = Color(0xFFFF6B6B);
-  static const Color successColor = Color(0xFF4ECDC4);
+  // Usar colores centralizados
+  static const Color primaryColor = AppColors.yaviracBlueDark;
+  static const Color secondaryColor = AppColors.yaviracOrange;
+  static const Color accentColor = Colors.white;
+  static const Color successColor = Color(0xFF10B981);
   
-  // Neon Colors
-  static const Color neonCyan = Color(0xFF00F3FF);
-  static const Color neonPurple = Color(0xFFBC13FE);
-  static const Color neonBlue = Color(0xFF0066FF);
-  static const Color neonPink = Color(0xFFFF00D4);
+  // Colores neon basados en Yavirac
+  static const Color neonCyan = AppColors.yaviracOrange;
+  static const Color neonPurple = AppColors.yaviracBlueDark;
+  static const Color neonBlue = AppColors.yaviracBlue;
+  static const Color neonPink = AppColors.yaviracOrange;
   
   static final BoxDecoration glassDecoration = BoxDecoration(
     gradient: LinearGradient(
@@ -41,10 +43,10 @@ class GlassTheme {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        const Color(0xFF0F0C29),
-        const Color(0xFF24243e),
-        const Color(0xFF302B63),
-        const Color(0xFF0F0C29),
+        AppColors.yaviracBlue,
+        AppColors.yaviracBlueDark,
+        AppColors.yaviracBlueDark.withOpacity(0.8),
+        AppColors.yaviracBlue,
       ],
       stops: const [0.0, 0.3, 0.7, 1.0],
     ),
@@ -61,7 +63,7 @@ class GlassTheme {
       textTheme: GoogleFonts.outfitTextTheme(
         ThemeData.dark().textTheme,
       ),
-      scaffoldBackgroundColor: const Color(0xFF1A1A2E),
+      scaffoldBackgroundColor: AppColors.yaviracBlue,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,

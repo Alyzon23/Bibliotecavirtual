@@ -26,10 +26,26 @@ class SupabaseAuthService {
 
   Future<bool> register(String email, String password, String name) async {
     try {
+      // Validar campos
+      if (email.isEmpty || password.isEmpty || name.isEmpty) {
+        print('Error: Campos vacíos');
+        return false;
+      }
+
+      if (password.length < 6) {
+        print('Error: Contraseña debe tener al menos 6 caracteres');
+        return false;
+      }
+
+      print('Intentando registrar usuario: $email');
+      
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        data: {'name': name}, // Agregar metadata
       );
+
+      print('Respuesta de signUp: ${response.user?.id}');
 
       if (response.user != null) {
         try {
@@ -40,8 +56,9 @@ class SupabaseAuthService {
             'role': 'lector',
             'created_at': DateTime.now().toIso8601String(),
           });
+          print('Usuario insertado en tabla users');
         } catch (e) {
-          print('Error insertando usuario: $e');
+          print('Error insertando usuario en tabla: $e');
         }
 
         _currentUser = app_user.User(
@@ -55,6 +72,9 @@ class SupabaseAuthService {
       }
     } catch (e) {
       print('Error en registro: $e');
+      if (e.toString().contains('anonymous_provider_disabled')) {
+        print('Error específico: Registro anónimo deshabilitado en Supabase');
+      }
     }
     return false;
   }

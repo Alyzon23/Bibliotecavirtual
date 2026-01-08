@@ -308,10 +308,34 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                                       ? Image.network(
                                           widget.book['cover_url'],
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Container(
-                                            color: GlassTheme.primaryColor.withOpacity(0.3),
-                                            child: const Icon(Icons.book, size: 80, color: Colors.white54),
-                                          ),
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Container(
+                                              color: Colors.grey.withOpacity(0.3),
+                                              child: const Center(
+                                                child: CircularProgressIndicator(color: Colors.white),
+                                              ),
+                                            );
+                                          },
+                                          errorBuilder: (context, error, stackTrace) {
+                                            print('❌ Error cargando imagen: $error');
+                                            print('📸 URL: ${widget.book['cover_url']}');
+                                            return Container(
+                                              color: GlassTheme.primaryColor.withOpacity(0.3),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(Icons.broken_image, size: 40, color: Colors.white54),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'Error al cargar imagen',
+                                                    style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
                                         )
                                       : Container(
                                           color: GlassTheme.primaryColor.withOpacity(0.3),
