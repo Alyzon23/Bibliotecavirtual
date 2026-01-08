@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../data/services/supabase_auth_service.dart';
-import '../../../data/services/debug_service.dart';
 import '../../../data/services/cache_service.dart';
+import '../../../core/services/lazy_loading_service.dart';
 import '../../theme/glass_theme.dart';
+import '../../widgets/common_widgets.dart';
 import '../auth/login_screen.dart';
 import '../../../main.dart';
 import 'video_player_screen.dart';
 import 'book_detail_screen.dart';
-import 'simple_video_player.dart';
 import 'youtube_video_player.dart';
-import 'category_filter.dart';
 import 'add_book_dialog.dart';
 import 'add_video_dialog.dart';
 import 'category_books_view.dart';
@@ -31,12 +29,10 @@ class UserHome extends StatefulWidget {
   State<UserHome> createState() => _UserHomeState();
 }
 
-class _UserHomeState extends State<UserHome> {
+class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
   int _selectedIndex = 0;
   String _userName = 'Usuario';
-  String _userEmail = 'user@biblioteca.com';
   String _userRole = 'usuario';
-  bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   final ValueNotifier<bool> _searchingNotifier = ValueNotifier<bool>(false);
@@ -45,7 +41,13 @@ class _UserHomeState extends State<UserHome> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadUserDataAsync();
+  }
+
+  void _loadUserDataAsync() {
+    Future.microtask(() async {
+      await _loadUserData();
+    });
   }
 
   @override
@@ -61,17 +63,18 @@ class _UserHomeState extends State<UserHome> {
       try {
         final userData = await Supabase.instance.client
             .from('users')
-            .select('name, email, role')
+            .select('name, role')
             .eq('id', user.id)
             .single();
         
-        setState(() {
-          _userName = userData['name'] ?? 'Usuario';
-          _userEmail = userData['email'] ?? user.email ?? 'user@biblioteca.com';
-          _userRole = userData['role'] ?? 'usuario';
-          final role = userData['role']?.toString().toLowerCase() ?? 'lector';
-          _canEdit = role == 'profesor' || role == 'bibliotecario' || role == 'admin' || role == 'administrador';
-        });
+        if (mounted) {
+          setState(() {
+            _userName = userData['name'] ?? 'Usuario';
+            _userRole = userData['role'] ?? 'usuario';
+            final role = userData['role']?.toString().toLowerCase() ?? 'lector';
+            _canEdit = ['profesor', 'bibliotecario', 'admin', 'administrador'].contains(role);
+          });
+        }
       } catch (e) {
         print('Error cargando datos del usuario: $e');
       }
@@ -111,32 +114,28 @@ class _UserHomeState extends State<UserHome> {
   }
 
   Widget _getSelectedPage() {
+    final tabs = {
+      0: () => _HomeTab(searchQuery: _searchQuery),
+      1: () => _LibraryTab(canEdit: _canEdit, userRole: _userRole),
+      2: () => _VideosTab(canEdit: _canEdit, userRole: _userRole),
+      3: () => _FavoritesTab(canEdit: _canEdit),
+      4: () => _ProfileTab(userRole: _userRole),
+      5: () => const _TopBooksTab(),
+      6: () => _AddContentTab(canEdit: _canEdit),
+      7: () => const _UserManagementTab(),
+      8: () => const _RequestsTab(),
+    };
+    
     if (_searchQuery.isNotEmpty) {
       return _SearchResultsTab(searchQuery: _searchQuery);
     }
     
-    switch (_selectedIndex) {
-      case 0:
-        return _HomeTab(searchQuery: _searchQuery);
-      case 1:
-        return _LibraryTab(searchQuery: _searchQuery, canEdit: _canEdit, userRole: _userRole);
-      case 2:
-        return _VideosTab(searchQuery: _searchQuery, canEdit: _canEdit, userRole: _userRole);
-      case 3:
-        return _FavoritesTab(canEdit: _canEdit);
-      case 4:
-        return _ProfileTab(userRole: _userRole);
-      case 5:
-        return const _TopBooksTab();
-      case 6:
-        return _AddContentTab(canEdit: _canEdit);
-      case 7:
-        return const _UserManagementTab();
-      case 8:
-        return const _RequestsTab();
-      default:
-        return _HomeTab(searchQuery: _searchQuery);
-    }
+    final tabBuilder = tabs[_selectedIndex] ?? tabs[0]!;
+    return LazyLoadingService.lazyWidget(
+      'tab_$_selectedIndex',
+      () async => tabBuilder(),
+      placeholder: LoadingPlaceholder(),
+    );
   }
 
   @override
@@ -544,74 +543,6 @@ class _HomeTab extends StatelessWidget {
   final String searchQuery;
   const _HomeTab({this.searchQuery = ''});
 
-  Future<List<Map<String, dynamic>>> _loadTopBooks() async {
-    return await CacheService.getTopBooks();
-  }
-
-  Future<List<Map<String, dynamic>>> _loadRecentBooks() async {
-    return await CacheService.getRecentBooks();
-  }
-
-  Future<List<Map<String, dynamic>>> _loadRecentVideos() async {
-    return await CacheService.getRecentVideos();
-  }
-
-  void _openVideo(BuildContext context, Map<String, dynamic> video) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(video['title']),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (video['description'] != null)
-              Text('Descripción: ${video['description']}'),
-            const SizedBox(height: 8),
-            Text('Categoría: ${video['category']}'),
-            const SizedBox(height: 8),
-            Text('Vistas: ${video['views'] ?? 0}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => VideoPlayerScreen(video: video),
-                ),
-              );
-            },
-            child: const Text('Ver Video'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _playVideo(BuildContext context, String videoId) async {
-    try {
-      final uri = Uri.parse('https://www.youtube.com/watch?v=$videoId');
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se puede abrir el video')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -619,393 +550,142 @@ class _HomeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header con título
-          FadeInDown(
-            child: Container(
-              width: double.infinity,
-              height: 200,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)], // Azul Yavirac
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1E3A8A).withOpacity(0.3), // Azul Yavirac
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: -50,
-                    top: -50,
-                    child: Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.1),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '¡Bienvenido!',
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Descubre miles de libros y videos educativos',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildWelcomeHeader(),
           const SizedBox(height: 32),
-          
-          // Top 10 Más Leídos
-          GlassmorphicContainer(
-            width: double.infinity,
-            height: 300,
-            borderRadius: 20,
-            blur: 15,
-            alignment: Alignment.center,
-            border: 0,
-            linearGradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.05),
-                Colors.white.withOpacity(0.02),
-              ],
-            ),
-            borderGradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.1),
-                Colors.white.withOpacity(0.05),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: GlassTheme.primaryColor.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.trending_up,
-                          color: GlassTheme.primaryColor,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Top 10 Más Leídos',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: FutureBuilder<List<Map<String, dynamic>>>(
-                      future: _loadTopBooks(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator(color: Colors.white));
-                        }
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return Center(child: Text('No hay datos disponibles', style: GoogleFonts.outfit(color: Colors.white70)));
-                        }
-                        return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: snapshot.data!.length,
-                          itemBuilder: (context, index) {
-                            final item = snapshot.data![index];
-                            final book = item['books'];
-                            
-                            // Filtrar por búsqueda
-                            if (searchQuery.isNotEmpty) {
-                              final title = (book['title'] ?? '').toString().toLowerCase();
-                              final author = (book['author'] ?? '').toString().toLowerCase();
-                              final query = searchQuery.toLowerCase();
-                              if (!title.contains(query) && !author.contains(query)) {
-                                return const SizedBox.shrink();
-                              }
-                            }
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 16),
-                              child: GestureDetector(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => BookDetailScreen(book: book),
-                                  ),
-                                ),
-                                child: GlassmorphicContainer(
-                                width: 140,
-                                height: 200,
-                                borderRadius: 12,
-                                blur: 10,
-                                alignment: Alignment.center,
-                                border: 0,
-                                linearGradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.white.withOpacity(0.1),
-                                    Colors.white.withOpacity(0.05),
-                                  ],
-                                ),
-                                borderGradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.white.withOpacity(0.2),
-                                    Colors.white.withOpacity(0.1),
-                                  ],
-                                ),
-                                child: IntrinsicHeight(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        height: 120,
-                                        child: ClipRRect(
-                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                          child: book['cover_url'] != null
-                                              ? Image.network(
-                                                  book['cover_url'],
-                                                  width: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
-                                                )
-                                              : const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
-                                        ),
-                                      ),
-                                      Container(
-                                        height: 70,
-                                        padding: const EdgeInsets.all(8),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              book['title'] ?? 'Sin título',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              book['author'] ?? 'Autor desconocido',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 9,
-                                                color: Colors.white70,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildTopBooksSection(),
           const SizedBox(height: 32),
-          
-          // Libros Recientes
-          const Text(
-            'Libros Recientes',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 200,
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _loadRecentBooks(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No hay libros disponibles'));
-                }
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final book = snapshot.data![index];
-                    return Container(
-                      width: 140,
-                      margin: const EdgeInsets.only(right: 12),
-                      child: GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookDetailScreen(book: book),
-                          ),
-                        ),
-                        child: Card(
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    color: Colors.grey,
-                                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                                  ),
-                                  child: book['cover_url'] != null
-                                      ? Image.network(
-                                          book['cover_url'],
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => const Icon(Icons.book, size: 40),
-                                        )
-                                      : const Icon(Icons.book, size: 40),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  book['title'],
-                                  style: const TextStyle(fontSize: 12),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
+          _buildSection('Libros Recientes', DataService.getRecentBooks()),
           const SizedBox(height: 24),
-          
-          // Videos Recientes
-          const Text(
-            'Videos Recientes',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 200,
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _loadRecentVideos(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No hay videos disponibles'));
-                }
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final video = snapshot.data![index];
-                    return Container(
-                      width: 200,
-                      margin: const EdgeInsets.only(right: 12),
-                      child: GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => YouTubeVideoPlayer(video: video),
-                          ),
-                        ),
-                        child: Card(
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    color: Colors.grey,
-                                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                                  ),
-                                  child: video['thumbnail_url'] != null
-                                      ? Image.network(
-                                          video['thumbnail_url'],
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => const Icon(Icons.video_library, size: 40),
-                                        )
-                                      : const Icon(Icons.video_library, size: 40),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  video['title'],
-                                  style: const TextStyle(fontSize: 12),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
+          _buildSection('Videos Recientes', DataService.getRecentVideos()),
         ],
       ),
+    );
+  }
+  
+  Widget _buildWelcomeHeader() {
+    return FadeInDown(
+      child: Container(
+        width: double.infinity,
+        height: 200,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E3A8A).withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '¡Bienvenido!',
+                style: GoogleFonts.poppins(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Descubre miles de libros y videos educativos',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTopBooksSection() {
+    return GlassmorphicContainer(
+      width: double.infinity,
+      height: 300,
+      borderRadius: 20,
+      blur: 15,
+      alignment: Alignment.center,
+      border: 0,
+      linearGradient: LinearGradient(
+        colors: [
+          Colors.white.withOpacity(0.05),
+          Colors.white.withOpacity(0.02),
+        ],
+      ),
+      borderGradient: LinearGradient(
+        colors: [
+          Colors.white.withOpacity(0.1),
+          Colors.white.withOpacity(0.05),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: GlassTheme.primaryColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.trending_up,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Top 10 Más Leídos',
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: HorizontalBookList(
+                future: DataService.getTopBooks(),
+                searchQuery: searchQuery,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSection(String title, Future<List<Map<String, dynamic>>> future) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        const SizedBox(height: 8),
+        HorizontalBookList(
+          future: future,
+          searchQuery: searchQuery,
+        ),
+      ],
     );
   }
 }
@@ -1408,10 +1088,11 @@ class _LibraryTabState extends State<_LibraryTab> {
         builder: (context, setState) => AlertDialog(
           title: Text('Editar: ${book['title']}'),
           content: SizedBox(
-            width: 500,
-            height: 600,
+            width: 400,
+            height: 400,
             child: SingleChildScrollView(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: titleController,
@@ -3146,8 +2827,12 @@ class _RequestsTabState extends State<_RequestsTab> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _loadRequests(),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Supabase.instance.client
+                  .from('requests')
+                  .stream(primaryKey: ['id'])
+                  .order('created_at', ascending: false)
+                  .map((data) => List<Map<String, dynamic>>.from(data)),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(color: Colors.white));
@@ -3196,11 +2881,11 @@ class _RequestsTabState extends State<_RequestsTab> {
                               color: Colors.white,
                             ),
                           ),
-                          title: Text(request['title'] ?? 'Solicitud', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                          title: Text(request['request_text']?.toString().substring(0, request['request_text'].toString().length > 30 ? 30 : request['request_text'].toString().length) ?? 'Solicitud', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('${request['user_name'] ?? 'Usuario'} • ${request['type'] ?? 'ayuda'}'.toUpperCase(), style: GoogleFonts.outfit(color: Colors.white70)),
+                              Text('${request['user_name'] ?? 'Usuario'} • ayuda'.toUpperCase(), style: GoogleFonts.outfit(color: Colors.white70)),
                               Text(isResolved ? 'RESUELTO' : 'PENDIENTE', style: GoogleFonts.outfit(color: isResolved ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -3292,8 +2977,7 @@ class _RequestsTabState extends State<_RequestsTab> {
           .update({'status': 'resuelto'})
           .eq('id', requestId);
       
-      setState(() {}); // Actualizar UI
-      
+      // StreamBuilder se actualiza automáticamente, no necesita setState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ Solicitud marcada como resuelta', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
       );
@@ -3311,8 +2995,7 @@ class _RequestsTabState extends State<_RequestsTab> {
           .delete()
           .eq('id', requestId);
       
-      setState(() {}); // Actualizar UI
-      
+      // StreamBuilder se actualiza automáticamente, no necesita setState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('🗑️ Solicitud eliminada', style: GoogleFonts.outfit()), backgroundColor: Colors.orange),
       );
@@ -3323,3 +3006,5 @@ class _RequestsTabState extends State<_RequestsTab> {
     }
   }
 }
+
+// Widget reutilizable eliminado - ahora está en common_widgets.dart

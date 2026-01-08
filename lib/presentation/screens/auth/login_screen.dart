@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../data/services/supabase_auth_service.dart';
 import '../../../data/services/test_users_service.dart';
 import '../../theme/glass_theme.dart';
+import '../../widgets/futuristic_widgets.dart';
 import '../user/user_home.dart';
 import '../admin/admin_dashboard.dart';
 import '../admin/librarian_dashboard.dart';
@@ -72,12 +73,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      // Obtener el rol del usuario para redirigir correctamente
       final userRole = _authService.currentUser?.role.toString().split('.').last ?? 'lector';
       print('🔍 Debug - Rol encontrado: $userRole');
       
       if (userRole == 'admin') {
-        print('➡️ Redirigiendo a UserHome con permisos admin');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -85,7 +84,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       } else if (userRole == 'bibliotecario') {
-        print('➡️ Redirigiendo a LibrarianDashboard');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -93,7 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       } else {
-        print('➡️ Redirigiendo a UserHome (rol: $userRole)');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -103,7 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Credenciales incorrectas')),
+        SnackBar(
+          content: Text('Credenciales incorrectas', style: GoogleFonts.outfit()),
+          backgroundColor: Colors.redAccent.withOpacity(0.8),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -120,7 +121,15 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.4),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF0F0C29).withOpacity(0.8),
+                const Color(0xFF302B63).withOpacity(0.6),
+                const Color(0xFF24243e).withOpacity(0.8),
+              ],
+            ),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -142,81 +151,112 @@ class _LoginScreenState extends State<LoginScreen> {
         // Left Side - Logo and Mission/Vision
         Expanded(
           flex: 3,
-          child: Padding(
-            padding: const EdgeInsets.all(60),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(
-                      'assets/images/yavirac.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 60, color: Colors.white),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(60),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: GlassTheme.neonCyan.withOpacity(0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: GlassTheme.neonCyan.withOpacity(0.2),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Image.asset(
+                        'assets/images/yavirac.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 70, color: Colors.white),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 60),
-                // Mission and Vision
-                Container(
-                  padding: const EdgeInsets.all(30),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  const SizedBox(height: 60),
+                  // Mission and Vision
+                  GlassmorphicContainer(
+                    width: 600,
+                    height: 350,
+                    borderRadius: 20,
+                    blur: 20,
+                    alignment: Alignment.center,
+                    border: 2,
+                    linearGradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.1),
+                        Colors.white.withOpacity(0.05),
+                      ],
+                    ),
+                    borderGradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        GlassTheme.neonCyan.withOpacity(0.5),
+                        GlassTheme.neonPurple.withOpacity(0.5),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'NUESTRA MISIÓN',
+                            style: GoogleFonts.outfit(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: GlassTheme.neonCyan,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Formar profesionales de excelencia enfocados en Ciencia, Tecnología y Sociedad.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              color: Colors.white.withOpacity(0.9),
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          Text(
+                            'NUESTRA VISIÓN',
+                            style: GoogleFonts.outfit(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: GlassTheme.neonPurple,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Al 2027 el Instituto Superior Tecnológico de Turismo y Patrimonio Yavirac será una institución de vanguardia en la formación tecnológica y conservación del patrimonio.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              color: Colors.white.withOpacity(0.9),
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'NUESTRA MISIÓN',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Formar profesionales de excelencia enfocados en Ciencia, Tecnología y Sociedad.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'NUESTRA VISIÓN',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Al 2027 el Instituto Superior Tecnológico de Turismo y Patrimonio Yavirac será una institución de vanguardia en la formación tecnológica y conservación del patrimonio.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -224,37 +264,46 @@ class _LoginScreenState extends State<LoginScreen> {
         Expanded(
           flex: 2,
           child: Center(
-            child: Container(
-              width: 400,
-              padding: const EdgeInsets.all(40),
-              margin: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Iniciar Sesión',
-                    style: GoogleFonts.outfit(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            child: SingleChildScrollView(
+              child: Container(
+                width: 450,
+                padding: const EdgeInsets.all(40),
+                margin: const EdgeInsets.all(40),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 30,
+                      spreadRadius: 10,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Accede a tu biblioteca digital',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      color: Colors.white70,
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Bienvenido',
+                      style: GoogleFonts.outfit(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  _buildLoginForm(),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Accede a tu biblioteca digital',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    _buildLoginForm(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -272,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             GlassmorphicContainer(
               width: double.infinity,
-              height: 550,
+              height: 600,
               borderRadius: 20,
               blur: 20,
               alignment: Alignment.center,
@@ -289,16 +338,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(0.5),
-                  Colors.white.withOpacity(0.5),
+                  GlassTheme.neonCyan.withOpacity(0.5),
+                  GlassTheme.neonPurple.withOpacity(0.5),
                 ],
               ),
               child: Padding(
                 padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.library_books, size: 60, color: Colors.white),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: GlassTheme.neonCyan.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: GlassTheme.neonCyan.withOpacity(0.2),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.auto_stories, size: 50, color: GlassTheme.neonCyan),
+                    ),
                     const SizedBox(height: 24),
                     Text(
                       'Biblioteca Digital',
@@ -310,7 +374,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 32),
                     _buildLoginForm(),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -323,58 +388,30 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLoginForm() {
     return Column(
       children: [
-        TextField(
+        FuturisticInput(
           controller: _emailController,
-          style: GoogleFonts.outfit(color: Colors.white),
-          decoration: InputDecoration(
-            labelText: 'Email',
-            labelStyle: GoogleFonts.outfit(color: Colors.white70),
-            prefixIcon: const Icon(Icons.email, color: Colors.white70),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-            ),
-          ),
+          label: 'Email',
+          icon: Icons.alternate_email,
           keyboardType: TextInputType.emailAddress,
         ),
-        const SizedBox(height: 16),
-        TextField(
+        const SizedBox(height: 20),
+        FuturisticInput(
           controller: _passwordController,
-          style: GoogleFonts.outfit(color: Colors.white),
-          decoration: InputDecoration(
-            labelText: 'Contraseña',
-            labelStyle: GoogleFonts.outfit(color: Colors.white70),
-            prefixIcon: const Icon(Icons.lock, color: Colors.white70),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                color: Colors.white70,
-              ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
-            ),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-            ),
-          ),
+          label: 'Contraseña',
+          icon: Icons.lock_outline,
           obscureText: _obscurePassword,
           onSubmitted: (_) => _login(),
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: Colors.white70,
+            ),
+            onPressed: () {
+              setState(() {
+                _obscurePassword = !_obscurePassword;
+              });
+            },
+          ),
         ),
         const SizedBox(height: 16),
         Row(
@@ -382,25 +419,24 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(
               child: Row(
                 children: [
-                  Checkbox(
-                    value: _rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        _rememberMe = value ?? false;
-                      });
-                    },
-                    fillColor: MaterialStateProperty.resolveWith((states) {
-                      if (states.contains(MaterialState.selected)) {
-                        return GlassTheme.primaryColor;
-                      }
-                      return Colors.white.withOpacity(0.2);
-                    }),
-                    checkColor: Colors.white,
+                  Theme(
+                    data: ThemeData(unselectedWidgetColor: Colors.white54),
+                    child: Checkbox(
+                      value: _rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          _rememberMe = value ?? false;
+                        });
+                      },
+                      activeColor: GlassTheme.neonCyan,
+                      checkColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    ),
                   ),
                   Flexible(
                     child: Text(
                       'Recordar',
-                      style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                      style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
                     ),
                   ),
                 ],
@@ -409,49 +445,40 @@ class _LoginScreenState extends State<LoginScreen> {
             TextButton(
               onPressed: () {},
               child: Text(
-                'Olvidé mi contraseña',
-                style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                'Olvidé contraseña',
+                style: GoogleFonts.outfit(color: GlassTheme.neonCyan, fontSize: 13),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _login,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.2),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.white.withOpacity(0.3)),
-              ),
-              elevation: 0,
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
-                : Text(
-                    'Iniciar Sesión',
-                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-          ),
+        const SizedBox(height: 32),
+        FuturisticButton(
+          onPressed: _isLoading ? null : _login,
+          text: 'INICIAR SESIÓN',
+          isLoading: _isLoading,
         ),
-        const SizedBox(height: 16),
-        TextButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const RegisterScreen()),
-          ),
-          child: Text(
-            '¿No tienes cuenta? Regístrate',
-            style: GoogleFonts.outfit(color: Colors.white70),
-          ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '¿No tienes cuenta? ',
+              style: GoogleFonts.outfit(color: Colors.white70),
+            ),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const RegisterScreen()),
+              ),
+              child: Text(
+                'Regístrate',
+                style: GoogleFonts.outfit(
+                  color: GlassTheme.neonPurple,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -7,6 +7,12 @@ class GlassTheme {
   static const Color accentColor = Color(0xFFFF6B6B);
   static const Color successColor = Color(0xFF4ECDC4);
   
+  // Neon Colors
+  static const Color neonCyan = Color(0xFF00F3FF);
+  static const Color neonPurple = Color(0xFFBC13FE);
+  static const Color neonBlue = Color(0xFF0066FF);
+  static const Color neonPink = Color(0xFFFF00D4);
+  
   static final BoxDecoration glassDecoration = BoxDecoration(
     gradient: LinearGradient(
       begin: Alignment.topLeft,

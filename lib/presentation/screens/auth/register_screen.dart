@@ -3,6 +3,7 @@ import 'package:glassmorphism/glassmorphism.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../data/services/supabase_auth_service.dart';
 import '../../theme/glass_theme.dart';
+import '../../widgets/futuristic_widgets.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -45,7 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Registro exitoso', style: GoogleFonts.outfit()),
-          backgroundColor: Colors.green,
+          backgroundColor: GlassTheme.successColor,
         ),
       );
       Navigator.pushReplacement(
@@ -74,8 +75,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 GlassmorphicContainer(
-                  width: 400,
-                  height: 650,
+                  width: 450,
+                  height: 700,
                   borderRadius: 20,
                   blur: 20,
                   alignment: Alignment.center,
@@ -92,8 +93,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withOpacity(0.5),
-                      Colors.white.withOpacity(0.1),
+                      GlassTheme.neonCyan.withOpacity(0.5),
+                      GlassTheme.neonPurple.withOpacity(0.5),
                     ],
                   ),
                   child: Padding(
@@ -101,7 +102,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.library_books, size: 60, color: Colors.white),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: GlassTheme.neonPurple.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: GlassTheme.neonPurple.withOpacity(0.2),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: Icon(Icons.person_add, size: 50, color: GlassTheme.neonPurple),
+                        ),
                         const SizedBox(height: 24),
                         Text(
                           'Crear Cuenta',
@@ -112,67 +127,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        _buildTextField(
+                        FuturisticInput(
                           controller: _nameController,
                           label: 'Nombre completo',
-                          icon: Icons.person,
+                          icon: Icons.person_outline,
                         ),
                         const SizedBox(height: 16),
-                        _buildTextField(
+                        FuturisticInput(
                           controller: _emailController,
                           label: 'Email',
-                          icon: Icons.email,
+                          icon: Icons.alternate_email,
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 16),
-                        _buildTextField(
+                        FuturisticInput(
                           controller: _passwordController,
                           label: 'Contraseña',
-                          icon: Icons.lock,
+                          icon: Icons.lock_outline,
                           obscureText: true,
                         ),
                         const SizedBox(height: 16),
-                        _buildTextField(
+                        FuturisticInput(
                           controller: _confirmPasswordController,
                           label: 'Confirmar contraseña',
                           icon: Icons.lock_outline,
                           obscureText: true,
                         ),
                         const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: GlassTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            onPressed: _isLoading ? null : _register,
-                            child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : Text(
-                                  'Registrarse',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                          ),
+                        FuturisticButton(
+                          onPressed: _isLoading ? null : _register,
+                          text: 'REGISTRARSE',
+                          isLoading: _isLoading,
                         ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                          ),
-                          child: Text(
-                            '¿Ya tienes cuenta? Inicia sesión',
-                            style: GoogleFonts.outfit(color: Colors.white70),
-                          ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '¿Ya tienes cuenta? ',
+                              style: GoogleFonts.outfit(color: Colors.white70),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                              ),
+                              child: Text(
+                                'Inicia sesión',
+                                style: GoogleFonts.outfit(
+                                  color: GlassTheme.neonCyan,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -182,36 +190,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool obscureText = false,
-    TextInputType? keyboardType,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: GoogleFonts.outfit(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.outfit(color: Colors.white70),
-        prefixIcon: Icon(icon, color: Colors.white70),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: GlassTheme.primaryColor),
-        ),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
       ),
     );
   }

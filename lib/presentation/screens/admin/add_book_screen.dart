@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/glass_theme.dart';
+import '../../widgets/futuristic_widgets.dart';
 
 class AddBookScreen extends StatefulWidget {
   const AddBookScreen({super.key});
@@ -137,13 +138,16 @@ class _AddBookScreenState extends State<AddBookScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Libro agregado exitosamente')),
+          SnackBar(
+            content: Text('Libro agregado exitosamente', style: GoogleFonts.outfit()),
+            backgroundColor: GlassTheme.successColor,
+          ),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Error: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.redAccent),
       );
     }
 
@@ -155,13 +159,20 @@ class _AddBookScreenState extends State<AddBookScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('Agregar Libro', style: GoogleFonts.outfit(color: Colors.white)),
+        title: Text('Agregar Libro', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         flexibleSpace: Container(
           decoration: BoxDecoration(
-            gradient: GlassTheme.glassDecoration.gradient,
+            gradient: LinearGradient(
+              colors: [
+                GlassTheme.neonPurple.withOpacity(0.3),
+                GlassTheme.neonBlue.withOpacity(0.3),
+              ],
+            ),
+            border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
           ),
         ),
       ),
@@ -169,264 +180,209 @@ class _AddBookScreenState extends State<AddBookScreen> {
         decoration: GlassTheme.decorationBackground,
         height: double.infinity,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
-          child: GlassmorphicContainer(
-            width: double.infinity,
-            height: 900,
-            borderRadius: 20,
-            blur: 20,
-            alignment: Alignment.center,
-            border: 2,
-            linearGradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.1),
-                Colors.white.withOpacity(0.05),
-              ],
-            ),
-            borderGradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.5),
-                Colors.white.withOpacity(0.1),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Detalles del Libro', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey[800])),
-                  const SizedBox(height: 24),
-                  _buildTextField(controller: _titleController, label: 'Título *', icon: Icons.title),
-                  const SizedBox(height: 16),
-                  _buildTextField(controller: _authorController, label: 'Autor *', icon: Icons.person),
-                  const SizedBox(height: 16),
-                  _buildTextField(controller: _descriptionController, label: 'Descripción', icon: Icons.description, maxLines: 3),
-                  const SizedBox(height: 16),
-                  
-                  // Archivo Picker
-                  Row(
+          padding: const EdgeInsets.fromLTRB(24, 120, 24, 24),
+          child: Column(
+            children: [
+              GlassmorphicContainer(
+                width: double.infinity,
+                height: 950,
+                borderRadius: 20,
+                blur: 20,
+                alignment: Alignment.center,
+                border: 2,
+                linearGradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+                borderGradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    GlassTheme.neonCyan.withOpacity(0.5),
+                    GlassTheme.neonPurple.withOpacity(0.5),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _fileUrlController, 
-                          label: 'URL del archivo (PDF/EPUB) *', 
-                          icon: Icons.link,
-                          hintText: 'https://ejemplo.com/libro.pdf'
-                        ),
+                      Text(
+                        'Información del Libro', 
+                        style: GoogleFonts.outfit(
+                          fontSize: 24, 
+                          fontWeight: FontWeight.bold, 
+                          color: GlassTheme.neonCyan
+                        )
                       ),
-                      const SizedBox(width: 8),
-                      _buildUploadButton(onPressed: _pickFile, label: 'Subir'),
+                      const SizedBox(height: 32),
+                      
+                      FuturisticInput(
+                        controller: _titleController, 
+                        label: 'Título', 
+                        icon: Icons.title
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      FuturisticInput(
+                        controller: _authorController, 
+                        label: 'Autor', 
+                        icon: Icons.person_outline
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      FuturisticInput(
+                        controller: _descriptionController, 
+                        label: 'Descripción', 
+                        icon: Icons.description_outlined,
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Archivo Picker
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: FuturisticInput(
+                              controller: _fileUrlController, 
+                              label: 'URL archivo (PDF/EPUB)', 
+                              icon: Icons.link,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 1,
+                            child: FuturisticButton(
+                              onPressed: _pickFile, 
+                              text: 'SUBIR',
+                              icon: Icons.upload_file,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_selectedFile != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            '✓ ${_selectedFile!.name}', 
+                            style: GoogleFonts.outfit(color: GlassTheme.successColor, fontSize: 13),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Cover Picker
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: FuturisticInput(
+                              controller: _coverUrlController, 
+                              label: 'URL Portada', 
+                              icon: Icons.image_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 1,
+                            child: FuturisticButton(
+                              onPressed: _pickCover, 
+                              text: 'SUBIR',
+                              icon: Icons.image,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_selectedCover != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            '✓ ${_selectedCover!.name}', 
+                            style: GoogleFonts.outfit(color: GlassTheme.successColor, fontSize: 13),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FuturisticInput(
+                              controller: _isbnController, 
+                              label: 'ISBN', 
+                              icon: Icons.qr_code
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: FuturisticInput(
+                              controller: _yearController, 
+                              label: 'Año', 
+                              icon: Icons.calendar_today_outlined,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      FuturisticDropdown<String>(
+                        value: _selectedCategory,
+                        label: 'Categoría',
+                        items: _categories.keys.map((category) => 
+                          DropdownMenuItem(value: category, child: Text(category, style: GoogleFonts.outfit(color: Colors.white)))
+                        ).toList(),
+                        onChanged: (value) => setState(() {
+                          _selectedCategory = value!;
+                          _selectedSubcategory = _categories[value]!.first;
+                        }),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      FuturisticDropdown<String>(
+                        value: _selectedSubcategory,
+                        label: 'Subcategoría',
+                        items: _categories[_selectedCategory]!.map((subcategory) => 
+                          DropdownMenuItem(value: subcategory, child: Text(subcategory, style: GoogleFonts.outfit(color: Colors.white)))
+                        ).toList(),
+                        onChanged: (value) => setState(() => _selectedSubcategory = value!),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      FuturisticDropdown<String>(
+                        value: _selectedFormat,
+                        label: 'Formato',
+                        items: [
+                          DropdownMenuItem(value: 'pdf', child: Text('PDF', style: GoogleFonts.outfit(color: Colors.white))),
+                          DropdownMenuItem(value: 'epub', child: Text('EPUB', style: GoogleFonts.outfit(color: Colors.white))),
+                        ],
+                        onChanged: (value) => setState(() => _selectedFormat = value!),
+                      ),
+                      
+                      const SizedBox(height: 40),
+                      
+                      FuturisticButton(
+                        onPressed: _isLoading ? null : _addBook, 
+                        text: 'AGREGAR LIBRO',
+                        isLoading: _isLoading,
+                        icon: Icons.add_circle_outline,
+                      ),
                     ],
                   ),
-                  if (_selectedFile != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text('Archivo: ${_selectedFile!.name}', style: GoogleFonts.outfit(color: Colors.green[700])),
-                    ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Cover Picker
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _coverUrlController, 
-                          label: 'URL de la portada', 
-                          icon: Icons.image,
-                          hintText: 'https://ejemplo.com/portada.jpg'
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildUploadButton(onPressed: _pickCover, label: 'Subir'),
-                    ],
-                  ),
-                  if (_selectedCover != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text('Portada: ${_selectedCover!.name}', style: GoogleFonts.outfit(color: Colors.green[700])),
-                    ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _isbnController, 
-                          label: 'ISBN', 
-                          icon: Icons.qr_code
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _yearController, 
-                          label: 'Año de publicación', 
-                          icon: Icons.calendar_today
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  DropdownButtonFormField<String>(
-                    value: _selectedCategory,
-                    dropdownColor: Colors.white,
-                    style: GoogleFonts.outfit(color: Colors.grey[800]),
-                    decoration: InputDecoration(
-                      labelText: 'Categoría',
-                      labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: GlassTheme.primaryColor),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.9),
-                    ),
-                    items: _categories.keys.map((category) => 
-                      DropdownMenuItem(value: category, child: Text(category, style: GoogleFonts.outfit(color: Colors.grey[800])))
-                    ).toList(),
-                    onChanged: (value) => setState(() {
-                      _selectedCategory = value!;
-                      _selectedSubcategory = _categories[value]!.first;
-                    }),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  DropdownButtonFormField<String>(
-                    value: _selectedSubcategory,
-                    dropdownColor: Colors.white,
-                    style: GoogleFonts.outfit(color: Colors.grey[800]),
-                    decoration: InputDecoration(
-                      labelText: 'Subcategoría',
-                      labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: GlassTheme.primaryColor),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.9),
-                    ),
-                    items: _categories[_selectedCategory]!.map((subcategory) => 
-                      DropdownMenuItem(value: subcategory, child: Text(subcategory, style: GoogleFonts.outfit(color: Colors.grey[800])))
-                    ).toList(),
-                    onChanged: (value) => setState(() => _selectedSubcategory = value!),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  DropdownButtonFormField<String>(
-                    value: _selectedFormat,
-                    dropdownColor: Colors.white,
-                    style: GoogleFonts.outfit(color: Colors.grey[800]),
-                    decoration: InputDecoration(
-                      labelText: 'Formato',
-                      labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: GlassTheme.primaryColor),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.9),
-                    ),
-                    items: [
-                      DropdownMenuItem(value: 'pdf', child: Text('PDF', style: GoogleFonts.outfit(color: Colors.grey[800]))),
-                      DropdownMenuItem(value: 'epub', child: Text('EPUB', style: GoogleFonts.outfit(color: Colors.grey[800]))),
-                    ],
-                    onChanged: (value) => setState(() => _selectedFormat = value!),
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: GlassTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      onPressed: _isLoading ? null : _addBook,
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text('Agregar Libro', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    int maxLines = 1,
-    String? hintText,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      style: GoogleFonts.outfit(color: Colors.grey[800]),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.outfit(color: Colors.grey[600]),
-        hintText: hintText,
-        hintStyle: GoogleFonts.outfit(color: Colors.grey[500]),
-        prefixIcon: Icon(icon, color: Colors.grey[600]),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.withOpacity(0.5)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: GlassTheme.primaryColor),
-        ),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.9),
-      ),
-    );
-  }
-
-  Widget _buildUploadButton({required VoidCallback onPressed, required String label}) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withOpacity(0.1),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.white.withOpacity(0.2)),
-        ),
-      ),
-      onPressed: onPressed,
-      child: Text(label, style: GoogleFonts.outfit()),
     );
   }
 }

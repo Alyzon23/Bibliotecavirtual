@@ -32,22 +32,24 @@ void main() async {
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyYWtrZnZpaXliemJ3anFvdGd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0NDA2MTQsImV4cCI6MjA3NzAxNjYxNH0.hxdFNt7XirJv1PetfL_Cq0rYWDCCJIO963egiiDN-fE',
   );
   
-  print('✅ Usando Supabase para todos los archivos');
-  
   // Inicializar DI
   DI.init();
   
-  // Seed solo si es necesario (en background)
-  _seedDataInBackground();
-  
   runApp(const BibliotecaDigitalApp());
+  
+  // Seed en background después de mostrar la app
+  _seedDataInBackground();
 }
 
-void _seedDataInBackground() async {
+void _seedDataInBackground() {
   // Ejecutar en background para no bloquear la UI
-  Future.delayed(const Duration(seconds: 2), () async {
-    await DatabaseSeeder.seedBooks();
-    await DatabaseSeeder.seedVideos();
+  Future.delayed(const Duration(seconds: 5), () async {
+    try {
+      await DatabaseSeeder.seedBooks();
+      await DatabaseSeeder.seedVideos();
+    } catch (e) {
+      print('Error seeding data: $e');
+    }
   });
 }
 
@@ -71,36 +73,23 @@ class _BibliotecaDigitalAppState extends State<BibliotecaDigitalApp> {
   }
 
   Future<void> _checkSession() async {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
-      final authService = SupabaseAuthService();
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        try {
-          final userData = await Supabase.instance.client
-              .from('users')
-              .select()
-              .eq('id', user.id)
-              .single();
-          
-          print('🔍 Debug - Usuario ID: ${user.id}');
-          print('🔍 Debug - Rol encontrado: ${userData['role']}');
-          print('🔍 Debug - Email: ${userData['email']}');
-          
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          // Cargar UserHome inmediatamente, los datos del usuario se cargan después
           setState(() {
-            final userRole = userData['role']?.toString().toLowerCase() ?? 'user';
-            print('🔍 Debug - Rol procesado: $userRole');
-            
-            print('➡️ Redirigiendo a UserHome (rol: $userRole)');
-            _initialScreen = UserHome(authService: authService);
+            _initialScreen = UserHome(authService: SupabaseAuthService());
             _isCheckingSession = false;
           });
           return;
-        } catch (e) {
-          print('Error cargando usuario: $e');
         }
       }
+    } catch (e) {
+      print('Error checking session: $e');
     }
+    
     setState(() {
       _isCheckingSession = false;
     });
