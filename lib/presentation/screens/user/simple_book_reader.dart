@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/glass_theme.dart';
 
 class SimpleBookReader extends StatefulWidget {
@@ -13,9 +14,11 @@ class SimpleBookReader extends StatefulWidget {
 }
 
 class _SimpleBookReaderState extends State<SimpleBookReader> {
-  final PdfViewerController _pdfController = PdfViewerController();
+  PDFViewController? _pdfController;
   int _currentPage = 1;
   int _totalPages = 0;
+  bool _isReady = false;
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -46,30 +49,97 @@ class _SimpleBookReaderState extends State<SimpleBookReader> {
                       color: Colors.white,
                       border: Border.all(color: Colors.brown.shade300, width: 3),
                     ),
-                    child: SfPdfViewer.network(
-                      widget.book['file_url'],
-                      controller: _pdfController,
-                      pageLayoutMode: PdfPageLayoutMode.single,
-                      scrollDirection: PdfScrollDirection.horizontal,
-                      pageSpacing: 0,
-                      onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-                        setState(() {
-                          _totalPages = details.document.pages.count;
-                        });
-                      },
-                      onPageChanged: (PdfPageChangedDetails details) {
-                        setState(() {
-                          _currentPage = details.newPageNumber;
-                        });
-                      },
-                    ),
+                    child: _errorMessage != null
+                        ? _buildErrorWidget()
+                        : PDFView(
+                            filePath: widget.book['file_url'],
+                            enableSwipe: true,
+                            swipeHorizontal: true,
+                            autoSpacing: false,
+                            pageFling: true,
+                            pageSnap: true,
+                            defaultPage: _currentPage - 1,
+                            fitPolicy: FitPolicy.BOTH,
+                            preventLinkNavigation: false,
+                            onRender: (pages) {
+                              setState(() {
+                                _totalPages = pages ?? 0;
+                                _isReady = true;
+                              });
+                            },
+                            onError: (error) {
+                              setState(() {
+                                _errorMessage = error.toString();
+                              });
+                            },
+                            onPageError: (page, error) {
+                              setState(() {
+                                _errorMessage = 'Error en página $page: $error';
+                              });
+                            },
+                            onViewCreated: (PDFViewController pdfViewController) {
+                              _pdfController = pdfViewController;
+                            },
+                            onLinkHandler: (String? uri) {
+                              if (uri != null) {
+                                launchUrl(Uri.parse(uri));
+                              }
+                            },
+                            onPageChanged: (int? page, int? total) {
+                              setState(() {
+                                _currentPage = (page ?? 0) + 1;
+                                _totalPages = total ?? 0;
+                              });
+                            },
+                          ),
                   ),
                 ),
               ),
             ),
-            _buildControls(),
+            if (_isReady) _buildControls(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Error al cargar el PDF',
+            style: GoogleFonts.crimsonText(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.red.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _errorMessage ?? 'Error desconocido',
+              style: GoogleFonts.crimsonText(
+                fontSize: 14,
+                color: Colors.red.shade400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Volver'),
+          ),
+        ],
       ),
     );
   }
@@ -141,7 +211,9 @@ class _SimpleBookReaderState extends State<SimpleBookReader> {
             ),
             child: IconButton(
               onPressed: _currentPage > 1
-                  ? () => _pdfController.previousPage()
+                  ? () async {
+                      await _pdfController?.setPage(_currentPage - 2);
+                    }
                   : null,
               icon: Icon(
                 Icons.chevron_left,
@@ -184,7 +256,9 @@ class _SimpleBookReaderState extends State<SimpleBookReader> {
             ),
             child: IconButton(
               onPressed: _currentPage < _totalPages
-                  ? () => _pdfController.nextPage()
+                  ? () async {
+                      await _pdfController?.setPage(_currentPage);
+                    }
                   : null,
               icon: Icon(
                 Icons.chevron_right,

@@ -9,7 +9,6 @@ import '../../theme/glass_theme.dart';
 import '../../widgets/futuristic_widgets.dart';
 import '../user/user_home.dart';
 import '../admin/admin_dashboard.dart';
-import '../admin/librarian_dashboard.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -82,13 +81,6 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => UserHome(authService: _authService),
-          ),
-        );
-      } else if (userRole == 'bibliotecario') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LibrarianDashboard(authService: _authService),
           ),
         );
       } else {

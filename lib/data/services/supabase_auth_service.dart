@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart' as app_user;
+import 'enum_converter.dart';
 
+/// Servicio de autenticación con Supabase
 class SupabaseAuthService {
   final _supabase = Supabase.instance.client;
   
@@ -10,18 +12,9 @@ class SupabaseAuthService {
   bool get isLoggedIn => _currentUser != null;
   bool get isAdmin => _currentUser?.isAdmin ?? false;
 
+  /// Convierte string a UserRole usando EnumConverter
   app_user.UserRole _parseUserRole(String? role) {
-    switch (role) {
-      case 'admin':
-        return app_user.UserRole.admin;
-      case 'bibliotecario':
-        return app_user.UserRole.bibliotecario;
-      case 'profesor':
-        return app_user.UserRole.profesor;
-      case 'lector':
-      default:
-        return app_user.UserRole.lector;
-    }
+    return EnumConverter.parseUserRole(role);
   }
 
   Future<bool> register(String email, String password, String name) async {

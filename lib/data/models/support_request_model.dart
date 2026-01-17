@@ -1,6 +1,9 @@
+import '../services/enum_converter.dart';
+
 enum RequestStatus { pendiente, resuelto }
 enum RequestType { ayuda, configuracion, reporte, otro }
 
+/// Modelo para solicitudes de soporte
 class SupportRequest {
   final String id;
   final String userId;
@@ -34,14 +37,8 @@ class SupportRequest {
       userEmail: json['user_email'] ?? '',
       title: json['title'],
       description: json['description'],
-      type: RequestType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['type'],
-        orElse: () => RequestType.otro,
-      ),
-      status: RequestStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == json['status'],
-        orElse: () => RequestStatus.pendiente,
-      ),
+      type: EnumConverter.parseRequestType(json['type']),
+      status: EnumConverter.parseRequestStatus(json['status']),
       createdAt: DateTime.parse(json['created_at']),
       resolvedAt: json['resolved_at'] != null ? DateTime.parse(json['resolved_at']) : null,
     );
@@ -55,8 +52,8 @@ class SupportRequest {
       'user_email': userEmail,
       'title': title,
       'description': description,
-      'type': type.toString().split('.').last,
-      'status': status.toString().split('.').last,
+      'type': EnumConverter.requestTypeToString(type),
+      'status': EnumConverter.requestStatusToString(status),
       'created_at': createdAt.toIso8601String(),
       'resolved_at': resolvedAt?.toIso8601String(),
     };

@@ -1,74 +1,27 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../data/services/cache_service.dart';
-
+/// Servicio de caché genérico para datos de la aplicación
 class CacheService {
   static final Map<String, dynamic> _cache = {};
   static final Map<String, DateTime> _cacheTimestamps = {};
   static const Duration _cacheExpiry = Duration(minutes: 5);
 
-  static Future<List<Map<String, dynamic>>> getTopBooks() async {
-    const key = 'top_books';
+  /// Obtiene un valor del caché si es válido
+  static T? get<T>(String key) {
     if (_isValidCache(key)) {
-      return List<Map<String, dynamic>>.from(_cache[key]);
+      return _cache[key] as T?;
     }
-
-    try {
-      final response = await Supabase.instance.client
-          .from('book_stats')
-          .select('book_id, open_count, books(*)')
-          .order('open_count', ascending: false)
-          .limit(10);
-      
-      _cache[key] = response;
-      _cacheTimestamps[key] = DateTime.now();
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+    return null;
   }
 
-  static Future<List<Map<String, dynamic>>> getRecentBooks() async {
-    const key = 'recent_books';
-    if (_isValidCache(key)) {
-      return List<Map<String, dynamic>>.from(_cache[key]);
-    }
-
-    try {
-      final response = await Supabase.instance.client
-          .from('books')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(5); // Reducido de 10 a 5
-      
-      _cache[key] = response;
-      _cacheTimestamps[key] = DateTime.now();
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
+  /// Almacena un valor en caché
+  static void set<T>(String key, T value) {
+    _cache[key] = value;
+    _cacheTimestamps[key] = DateTime.now();
   }
 
-  static Future<List<Map<String, dynamic>>> getRecentVideos() async {
-    const key = 'recent_videos';
-    if (_isValidCache(key)) {
-      return List<Map<String, dynamic>>.from(_cache[key]);
-    }
+  /// Verifica si una clave está en caché y es válida
+  static bool isValid(String key) => _isValidCache(key);
 
-    try {
-      final response = await Supabase.instance.client
-          .from('videos')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(5); // Reducido de 10 a 5
-      
-      _cache[key] = response;
-      _cacheTimestamps[key] = DateTime.now();
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      return [];
-    }
-  }
-
+  /// Valida si el caché no ha expirado
   static bool _isValidCache(String key) {
     if (!_cache.containsKey(key) || !_cacheTimestamps.containsKey(key)) {
       return false;
@@ -78,20 +31,15 @@ class CacheService {
     return DateTime.now().difference(timestamp) < _cacheExpiry;
   }
 
-  static void clearCache() {
+  /// Limpia todo el caché
+  static void clearAll() {
     _cache.clear();
     _cacheTimestamps.clear();
   }
 
-  static void clearBooksCache() {
-    _cache.remove('recent_books');
-    _cache.remove('top_books');
-    _cacheTimestamps.remove('recent_books');
-    _cacheTimestamps.remove('top_books');
-  }
-
-  static void clearVideosCache() {
-    _cache.remove('recent_videos');
-    _cacheTimestamps.remove('recent_videos');
+  /// Elimina una clave específica del caché
+  static void remove(String key) {
+    _cache.remove(key);
+    _cacheTimestamps.remove(key);
   }
 }

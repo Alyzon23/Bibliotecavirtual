@@ -1,27 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:glassmorphism/glassmorphism.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../../data/services/supabase_auth_service.dart';
-import '../../../data/services/cache_service.dart';
 import '../../../core/services/lazy_loading_service.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../theme/glass_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../auth/login_screen.dart';
 import '../../../main.dart';
-import 'video_player_screen.dart';
-import 'book_detail_screen.dart';
-import 'youtube_video_player.dart';
-import 'add_book_dialog.dart';
-import 'add_video_dialog.dart';
+import 'tabs/home_tab.dart';
+import 'tabs/library_tab.dart';
+import 'tabs/videos_tab.dart';
 import '../admin/add_book_screen.dart';
 import '../admin/add_video_screen.dart';
-import 'category_books_view.dart';
-import 'category_videos_view.dart';
 import 'users_management_screen.dart';
+import 'book_detail_screen.dart';
+import '../../../data/services/cache_service.dart';
 
 class UserHome extends StatefulWidget {
   final SupabaseAuthService authService;
@@ -117,377 +113,214 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
   }
 
   Widget _getSelectedPage() {
-    final tabs = {
-      0: () => _HomeTab(searchQuery: _searchQuery),
-      1: () => _LibraryTab(canEdit: _canEdit, userRole: _userRole),
-      2: () => _VideosTab(canEdit: _canEdit, userRole: _userRole),
-      3: () => _FavoritesTab(canEdit: _canEdit),
-      4: () => _ProfileTab(userRole: _userRole),
-      5: () => const _TopBooksTab(),
-      6: () => _AddContentTab(canEdit: _canEdit),
-      7: () => const _UserManagementTab(),
-      8: () => const _RequestsTab(),
-    };
-    
     if (_searchQuery.isNotEmpty) {
       return _SearchResultsTab(searchQuery: _searchQuery);
     }
     
-    final tabBuilder = tabs[_selectedIndex] ?? tabs[0]!;
-    return LazyLoadingService.lazyWidget(
-      'tab_$_selectedIndex',
-      () async => tabBuilder(),
-      placeholder: LoadingPlaceholder(),
-    );
+    switch (_selectedIndex) {
+      case 0:
+        return HomeTab(searchQuery: _searchQuery);
+      case 1:
+        return LibraryTab(canEdit: _canEdit, userRole: _userRole);
+      case 2:
+        return VideosTab(canEdit: _canEdit, userRole: _userRole);
+      case 3:
+        return _FavoritesTab(canEdit: _canEdit);
+      case 4:
+        return _ProfileTab(userRole: _userRole);
+      case 5:
+        return const _TopBooksTab();
+      case 6:
+        return _AddContentTab(canEdit: _canEdit);
+      case 7:
+        return const _UserManagementTab();
+      case 8:
+        return const _RequestsTab();
+      default:
+        return HomeTab(searchQuery: _searchQuery);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Para móvil (APK) usar Drawer, para web usar sidebar fijo
+    final isMobile = !kIsWeb;
+    
     return Scaffold(
+      drawer: isMobile ? _buildDrawer() : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.primaryGradient,
         ),
         child: Row(
           children: [
-            // Sidebar fijo
-            FadeInLeft(
-              child: GlassmorphicContainer(
-                width: 280,
-                height: double.infinity,
-                borderRadius: 0,
-                blur: 20,
-                alignment: Alignment.center,
-                border: 0,
-                linearGradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.yaviracBlueDark.withOpacity(0.9),
-                    AppColors.yaviracOrange.withOpacity(0.95),
-                  ],
-                ),
-                borderGradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.05),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Header del usuario
-                    FadeInDown(
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          children: [
-                            // Logo del instituto
-                            Container(
-                              width: 60,
-                              height: 60,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.asset(
-                                  'assets/images/yavirac.png',
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.school,
-                                    color: Colors.white,
-                                    size: 30,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Info del usuario
-                            Row(
-                              children: [
-                                // Avatar con inicial
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    gradient: AppColors.avatarGradient,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      AppColors.avatarShadow,
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                // Nombre y rol
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _userName,
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          gradient: AppColors.roleGradient,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          _userRole.toUpperCase(),
-                                          style: GoogleFonts.poppins(
-                                            color: AppColors.getRoleTextColor(_userRole),
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 1,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Menú principal
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        children: [
-                          _buildMenuItem(Icons.home, 'Inicio', 0),
-                          _buildMenuItem(Icons.library_books, 'Libros', 1),
-                          _buildMenuItem(Icons.video_library, 'Videos', 2),
-                          _buildMenuItem(Icons.favorite, 'Favoritos', 3),
-                          _buildMenuItem(Icons.person, 'Perfil', 4),
-                          const Divider(color: Colors.white24, height: 32),
-                          _buildMenuItem(Icons.trending_up, 'Top 10 Libros', 5),
-                          if (_canEdit) _buildMenuItem(Icons.add, 'Agregar Contenido', 6),
-                          if (_userRole == 'admin' || _userRole == 'administrador') _buildMenuItem(Icons.people, 'Gestión de Usuarios', 7),
-                          if (_userRole == 'admin' || _userRole == 'administrador') _buildMenuItem(Icons.help_center, 'Solicitudes', 8),
-                          _buildMenuItem(Icons.settings, 'Configuración', -1, onTap: () {
-                            // Cambiar a pestaña de perfil
-                            setState(() => _selectedIndex = 4);
-                          }),
-                          ListTile(
-                            leading: ValueListenableBuilder<bool>(
-                              valueListenable: ThemeManager.isDarkMode,
-                              builder: (context, isDark, child) {
-                                return Icon(
-                                  isDark ? Icons.light_mode : Icons.dark_mode,
-                                  color: Colors.white70,
-                                );
-                              },
-                            ),
-                            title: ValueListenableBuilder<bool>(
-                              valueListenable: ThemeManager.isDarkMode,
-                              builder: (context, isDark, child) {
-                                return Text(
-                                  isDark ? 'Modo Claro' : 'Modo Oscuro',
-                                  style: const TextStyle(color: Colors.white),
-                                );
-                              },
-                            ),
-                            onTap: () {
-                              ThemeManager.toggleTheme();
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Cerrar sesión
-                    FadeInUp(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        child: Container(
-                          width: double.infinity,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.logoutGradient,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              AppColors.logoutShadow,
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _logout,
-                              borderRadius: BorderRadius.circular(16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Cerrar Sesión',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+            // Sidebar fijo solo para web
+            if (!isMobile) _buildSidebar(),
+            // Contenido principal
+            Expanded(
+              child: Column(
+                children: [
+                  _buildAppBar(),
+                  Expanded(
+                    child: _getSelectedPage(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.transparent,
+      child: FadeInLeft(
+        child: GlassmorphicContainer(
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: 0,
+          blur: 20,
+          alignment: Alignment.center,
+          border: 0,
+          linearGradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.yaviracBlueDark.withOpacity(0.9),
+              AppColors.yaviracOrange.withOpacity(0.95),
+            ],
+          ),
+          borderGradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withOpacity(0.1),
+              Colors.white.withOpacity(0.05),
+            ],
+          ),
+          child: Column(
+            children: [
+              _buildUserHeader(),
+              _buildMenuItems(),
+              _buildLogoutButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return FadeInLeft(
+      child: GlassmorphicContainer(
+        width: 280,
+        height: double.infinity,
+        borderRadius: 0,
+        blur: 20,
+        alignment: Alignment.center,
+        border: 0,
+        linearGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.yaviracBlueDark.withOpacity(0.9),
+            AppColors.yaviracOrange.withOpacity(0.95),
+          ],
+        ),
+        borderGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildUserHeader(),
+            _buildMenuItems(),
+            _buildLogoutButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserHeader() {
+    return FadeInDown(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/images/yavirac.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.school,
+                    color: Colors.white,
+                    size: 30,
+                  ),
                 ),
               ),
             ),
-                // Contenido principal
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.avatarGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [AppColors.avatarShadow],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // AppBar
-                      GlassmorphicContainer(
-                        width: double.infinity,
-                        height: 70,
-                        borderRadius: 0,
-                        blur: 15,
-                        alignment: Alignment.center,
-                        border: 0,
-                        linearGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.1),
-                            Colors.white.withOpacity(0.05),
-                          ],
+                      Text(
+                        _userName,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
-                        borderGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.2),
-                            Colors.white.withOpacity(0.1),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Row(
-                            children: [
-                              const Spacer(),
-                              Text(
-                                'Biblioteca Virtual Yavirac',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              const Spacer(),
-                              ValueListenableBuilder<bool>(
-                                valueListenable: _searchingNotifier,
-                                builder: (context, isSearching, child) {
-                                  return isSearching
-                                      ? Container(
-                                          height: 40,
-                                          width: 250,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: GlassTheme.primaryColor, width: 1),
-                                          ),
-                                          child: TextField(
-                                            controller: _searchController,
-                                            style: GoogleFonts.outfit(color: Colors.grey.shade800, fontSize: 14),
-                                            decoration: InputDecoration(
-                                              hintText: 'Buscar...',
-                                              hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400, fontSize: 14),
-                                              border: InputBorder.none,
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                            ),
-                                            onChanged: (value) {
-                                              setState(() {
-                                                _searchQuery = value;
-                                              });
-                                            },
-                                            onSubmitted: (value) {
-                                              _searchingNotifier.value = false;
-                                              setState(() {
-                                                _searchQuery = '';
-                                              });
-                                            },
-                                            autofocus: true,
-                                          ),
-                                        )
-                                      : const SizedBox(width: 250);
-                                },
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                                ),
-                                child: ValueListenableBuilder<bool>(
-                                  valueListenable: _searchingNotifier,
-                                  builder: (context, isSearching, child) {
-                                    return IconButton(
-                                      icon: Icon(isSearching ? Icons.close : Icons.search, color: Colors.white70),
-                                      onPressed: () {
-                                        _searchingNotifier.value = !_searchingNotifier.value;
-                                        if (!_searchingNotifier.value) {
-                                          _searchController.clear();
-                                          setState(() {
-                                            _searchQuery = '';
-                                          });
-                                        }
-                                      },
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _userName,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.logout, color: Colors.redAccent),
-                                  onPressed: _logout,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      // Contenido
-                      Expanded(
-                        child: Container(
-                          // Remove color to show validation background
-                          child: _getSelectedPage(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.roleGradient,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _userRole.toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            color: AppColors.getRoleTextColor(_userRole),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1,
+                          ),
                         ),
                       ),
                     ],
@@ -495,10 +328,213 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                 ),
               ],
             ),
-          ),
+          ],
+        ),
+      ),
     );
   }
 
+  Widget _buildMenuItems() {
+    return Expanded(
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          _buildMenuItem(Icons.home, 'Inicio', 0),
+          _buildMenuItem(Icons.library_books, 'Libros', 1),
+          _buildMenuItem(Icons.video_library, 'Videos', 2),
+          _buildMenuItem(Icons.favorite, 'Favoritos', 3),
+          _buildMenuItem(Icons.person, 'Perfil', 4),
+          const Divider(color: Colors.white24, height: 32),
+          _buildMenuItem(Icons.trending_up, 'Top 10 Libros', 5),
+          if (_canEdit) _buildMenuItem(Icons.add, 'Agregar Contenido', 6),
+          if (_userRole == 'admin' || _userRole == 'administrador') _buildMenuItem(Icons.people, 'Gestión de Usuarios', 7),
+          if (_userRole == 'admin' || _userRole == 'administrador') _buildMenuItem(Icons.help_center, 'Solicitudes', 8),
+          _buildMenuItem(Icons.settings, 'Configuración', -1, onTap: () => setState(() => _selectedIndex = 4)),
+          ListTile(
+            leading: const Icon(Icons.dark_mode, color: Colors.white70),
+            title: const Text('Modo Oscuro', style: TextStyle(color: Colors.white)),
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return FadeInUp(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          width: double.infinity,
+          height: 50,
+          decoration: BoxDecoration(
+            gradient: AppColors.logoutGradient,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [AppColors.logoutShadow],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _logout,
+              borderRadius: BorderRadius.circular(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Cerrar Sesión',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    final isMobile = !kIsWeb;
+    return GlassmorphicContainer(
+      width: double.infinity,
+      height: isMobile ? 60 : 70,
+      borderRadius: 0,
+      blur: 15,
+      alignment: Alignment.center,
+      border: 0,
+      linearGradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withOpacity(0.1),
+          Colors.white.withOpacity(0.05),
+        ],
+      ),
+      borderGradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withOpacity(0.2),
+          Colors.white.withOpacity(0.1),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+        child: Row(
+          children: [
+            // Botón de menú solo para móvil
+            if (isMobile)
+              Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white, size: 24),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+            if (isMobile) const SizedBox(width: 16),
+            if (!isMobile) const Spacer(),
+            Text(
+              'Biblioteca Virtual Yavirac',
+              style: GoogleFonts.outfit(
+                fontSize: isMobile ? 18 : 24,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const Spacer(),
+            if (!isMobile) _buildSearchField(),
+            if (!isMobile) _buildSearchButton(),
+            if (!isMobile) const SizedBox(width: 12),
+            if (!isMobile) Text(
+              _userName,
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white70,
+              ),
+            ),
+            if (!isMobile) const SizedBox(width: 12),
+            if (!isMobile) Container(
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.logout, color: Colors.redAccent),
+                onPressed: _logout,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _searchingNotifier,
+      builder: (context, isSearching, child) {
+        return isSearching
+            ? Container(
+                height: 40,
+                width: 250,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.yaviracOrange, width: 1),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  style: GoogleFonts.outfit(color: Colors.grey.shade800, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar...',
+                    hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400, fontSize: 14),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  onSubmitted: (value) {
+                    _searchingNotifier.value = false;
+                    setState(() => _searchQuery = '');
+                  },
+                  autofocus: true,
+                ),
+              )
+            : const SizedBox(width: 250);
+      },
+    );
+  }
+
+  Widget _buildSearchButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _searchingNotifier,
+        builder: (context, isSearching, child) {
+          return IconButton(
+            icon: Icon(isSearching ? Icons.close : Icons.search, color: Colors.white70),
+            onPressed: () {
+              _searchingNotifier.value = !_searchingNotifier.value;
+              if (!_searchingNotifier.value) {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              }
+            },
+          );
+        },
+      ),
+    );
+  }
 
   Widget _buildMenuItem(IconData icon, String title, int index, {VoidCallback? onTap}) {
     final isSelected = _selectedIndex == index;
@@ -509,26 +545,28 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
         decoration: BoxDecoration(
           gradient: isSelected ? AppColors.menuItemGradient : null,
           borderRadius: BorderRadius.circular(16),
-          border: isSelected ? null : Border.all(
-            color: Colors.white.withOpacity(0.1),
-          ),
+          border: isSelected ? null : Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: onTap ?? (index >= 0 ? () {
-              setState(() => _selectedIndex = index);
-            } : null),
+            onTap: () {
+              // Cerrar drawer en móvil después de seleccionar
+              if (!kIsWeb && Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+              if (onTap != null) {
+                onTap();
+              } else if (index >= 0) {
+                setState(() => _selectedIndex = index);
+              }
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  Icon(icon, color: Colors.white, size: 24),
                   const SizedBox(width: 16),
                   Text(
                     title,
@@ -543,1361 +581,6 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _HomeTab extends StatelessWidget {
-  final String searchQuery;
-  const _HomeTab({this.searchQuery = ''});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWelcomeHeader(),
-          const SizedBox(height: 32),
-          _buildTopBooksSection(),
-          const SizedBox(height: 32),
-          _buildSection('Libros Recientes', DataService.getRecentBooks()),
-          const SizedBox(height: 24),
-          _buildSection('Videos Recientes', DataService.getRecentVideos()),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildWelcomeHeader() {
-    return FadeInDown(
-      child: Container(
-        width: double.infinity,
-        height: 200,
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            AppColors.primaryShadow,
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '¡Bienvenido!',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Descubre miles de libros y videos educativos',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildTopBooksSection() {
-    return GlassmorphicContainer(
-      width: double.infinity,
-      height: 300,
-      borderRadius: 20,
-      blur: 15,
-      alignment: Alignment.center,
-      border: 0,
-      linearGradient: LinearGradient(
-        colors: [
-          Colors.white.withOpacity(0.05),
-          Colors.white.withOpacity(0.02),
-        ],
-      ),
-      borderGradient: LinearGradient(
-        colors: [
-          Colors.white.withOpacity(0.1),
-          Colors.white.withOpacity(0.05),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: GlassTheme.primaryColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.trending_up,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Top 10 Más Leídos',
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: HorizontalBookList(
-                future: DataService.getTopBooks(),
-                searchQuery: searchQuery,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildSection(String title, Future<List<Map<String, dynamic>>> future) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-        ),
-        const SizedBox(height: 8),
-        HorizontalBookList(
-          future: future,
-          searchQuery: searchQuery,
-        ),
-      ],
-    );
-  }
-}
-
-class _LibraryTab extends StatefulWidget {
-  final String searchQuery;
-  final bool canEdit;
-  final String userRole;
-  const _LibraryTab({this.searchQuery = '', required this.canEdit, required this.userRole});
-
-  @override
-  State<_LibraryTab> createState() => _LibraryTabState();
-}
-
-class _LibraryTabState extends State<_LibraryTab> {
-  String? selectedCategory;
-  bool showCategoryAccordion = false;
-  
-  final categories = {
-    'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
-    'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
-    'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
-    'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
-    'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
-  };
-  
-  Future<List<Map<String, dynamic>>> _loadTopBooks() async {
-    final topBooks = await CacheService.getTopBooks();
-    return topBooks.map((item) => item['books'] as Map<String, dynamic>).toList();
-  }
-  
-  Future<List<Map<String, dynamic>>> _loadRecentBooks() async {
-    return await CacheService.getRecentBooks();
-  }
-  
-  Future<List<Map<String, dynamic>>> _loadSuggestions() async {
-    // Usar datos en caché para sugerencias
-    final recent = await CacheService.getRecentBooks();
-    return recent.take(5).toList();
-  }
-
-  Widget _buildBookList(List<Map<String, dynamic>> books, BuildContext context) {
-    return SizedBox(
-      height: 200,
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
-          ),
-          Expanded(
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: books.length,
-              itemBuilder: (context, index) {
-                final book = books[index];
-                return Container(
-                  width: 160,
-                  margin: const EdgeInsets.only(right: 16),
-                  child: Stack(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookDetailScreen(book: book),
-                          ),
-                        ),
-                        child: GlassmorphicContainer(
-                          width: double.infinity,
-                          height: double.infinity,
-                          borderRadius: 12,
-                          blur: 10,
-                          alignment: Alignment.center,
-                          border: 0,
-                          linearGradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.1),
-                              Colors.white.withOpacity(0.05),
-                            ],
-                          ),
-                          borderGradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.2),
-                              Colors.white.withOpacity(0.1),
-                            ],
-                          ),
-                          child: IntrinsicHeight(
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: 120,
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                    child: book['cover_url'] != null
-                                        ? Image.network(
-                                            book['cover_url'],
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
-                                          )
-                                        : const Center(child: Icon(Icons.book, size: 40, color: Colors.white54)),
-                                  ),
-                                ),
-                                Container(
-                                  height: 60,
-                                  padding: const EdgeInsets.all(6),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          book['title'] ?? 'Sin título',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          book['author'] ?? 'Autor desconocido',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 8,
-                                            color: Colors.white70,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (widget.canEdit && (widget.userRole == 'bibliotecario' || widget.userRole == 'admin'))
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: PopupMenuButton<String>(
-                            icon: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.more_vert, color: Colors.white, size: 16),
-                            ),
-                            onSelected: (value) {
-                              if (value == 'edit') {
-                                _editBook(context, book);
-                              } else if (value == 'delete' && widget.userRole == 'admin') {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor: const Color(0xFF1E293B),
-                                    title: Text('Eliminar libro', style: GoogleFonts.outfit(color: Colors.white)),
-                                    content: Text('¿Seguro que quieres eliminar este libro?', style: GoogleFonts.outfit(color: Colors.white70)),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          Navigator.pop(context);
-                                          try {
-                                            await Supabase.instance.client.from('books').delete().eq('id', book['id']);
-                                            // Limpiar caché de libros
-                                            CacheService.clearBooksCache();
-                                            setState(() {});
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Libro eliminado correctamente', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
-                                            );
-                                          } catch (e) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Error al eliminar: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
-                                            );
-                                          }
-                                        },
-                                        child: Text('Eliminar', style: GoogleFonts.outfit(color: Colors.red)),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit, size: 16),
-                                    SizedBox(width: 8),
-                                    Text('Editar'),
-                                  ],
-                                ),
-                              ),
-                              if (widget.userRole == 'admin')
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete, size: 16, color: Colors.red),
-                                      SizedBox(width: 8),
-                                      Text('Eliminar', style: TextStyle(color: Colors.red)),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.arrow_forward_ios, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (selectedCategory != null) {
-      return CategoryBooksView(
-        category: selectedCategory!,
-        onBack: () => setState(() => selectedCategory = null),
-        canEdit: widget.canEdit,
-        userRole: widget.userRole,
-      );
-    }
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                showCategoryAccordion = !showCategoryAccordion;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.yaviracOrange.withOpacity(0.2),
-                    AppColors.yaviracBlueDark.withOpacity(0.2),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.yaviracOrange.withOpacity(0.4),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.yaviracOrange.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: AppColors.avatarGradient,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.category, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Explorar Categorías',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      color: AppColors.yaviracOrange,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (showCategoryAccordion)
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.yaviracOrange.withOpacity(0.3),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: categories.keys.map((category) {
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            selectedCategory = category;
-                            showCategoryAccordion = false;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.yaviracOrange.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(Icons.folder, color: Colors.white, size: 16),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  category,
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                color: AppColors.yaviracOrange,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          
-          const SizedBox(height: 32),
-          
-          // Top 10 Libros
-          Text(
-            'Top 10 Libros',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _loadTopBooks(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(height: 200, child: Center(child: Text('No hay libros populares', style: GoogleFonts.outfit(color: Colors.white70))));
-              }
-              return _buildBookList(snapshot.data!, context);
-            },
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Libros Recientes
-          Text(
-            'Libros Recientes',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _loadRecentBooks(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(height: 200, child: Center(child: Text('No hay libros recientes', style: GoogleFonts.outfit(color: Colors.white70))));
-              }
-              return _buildBookList(snapshot.data!, context);
-            },
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Libros Sugeridos
-          Text(
-            'Libros Sugeridos',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _loadSuggestions(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(height: 200, child: Center(child: Text('No hay libros sugeridos', style: GoogleFonts.outfit(color: Colors.white70))));
-              }
-              return _buildBookList(snapshot.data!, context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editBook(BuildContext context, Map<String, dynamic> book) {
-    final titleController = TextEditingController(text: book['title']);
-    final authorController = TextEditingController(text: book['author']);
-    final coverUrlController = TextEditingController(text: book['cover_url']);
-    final isbnController = TextEditingController(text: book['isbn']);
-    final yearController = TextEditingController(text: book['year']?.toString());
-    final descriptionController = TextEditingController(text: book['description']);
-    
-    String selectedCategory = book['category'] ?? 'Desarrollo de Software';
-    String selectedSubcategory = book['subcategory'] ?? '';
-    
-    final categories = {
-      'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
-      'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
-      'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
-      'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
-      'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
-    };
-    
-    if (selectedSubcategory.isEmpty || !categories[selectedCategory]!.contains(selectedSubcategory)) {
-      selectedSubcategory = categories[selectedCategory]!.first;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Editar: ${book['title']}'),
-          content: SizedBox(
-            width: 400,
-            height: 400,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    decoration: const InputDecoration(labelText: 'Título'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: authorController,
-                    decoration: const InputDecoration(labelText: 'Autor'),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    decoration: const InputDecoration(labelText: 'Categoría'),
-                    items: categories.keys.map((category) {
-                      return DropdownMenuItem(value: category, child: Text(category));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedCategory = value!;
-                        selectedSubcategory = categories[value]!.first;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(selectedCategory),
-                    value: selectedSubcategory,
-                    decoration: const InputDecoration(labelText: 'Subcategoría'),
-                    items: categories[selectedCategory]!.map((subcategory) {
-                      return DropdownMenuItem(value: subcategory, child: Text(subcategory));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedSubcategory = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: coverUrlController,
-                    decoration: const InputDecoration(labelText: 'URL de portada'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: isbnController,
-                    decoration: const InputDecoration(labelText: 'ISBN'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: yearController,
-                    decoration: const InputDecoration(labelText: 'Año de publicación'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: 'Descripción'),
-                    maxLines: 3,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  await Supabase.instance.client
-                      .from('books')
-                      .update({
-                        'title': titleController.text,
-                        'author': authorController.text,
-                        'category': selectedCategory,
-                        'subcategory': selectedSubcategory,
-                        'cover_url': coverUrlController.text,
-                        'isbn': isbnController.text,
-                        'year': int.tryParse(yearController.text),
-                        'description': descriptionController.text,
-                      })
-                      .eq('id', book['id']);
-                  
-                  Navigator.pop(context);
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Libro actualizado correctamente')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-}
-
-class _VideosTab extends StatefulWidget {
-  final String searchQuery;
-  final bool canEdit;
-  final String userRole;
-  const _VideosTab({this.searchQuery = '', required this.canEdit, required this.userRole});
-
-  @override
-  State<_VideosTab> createState() => _VideosTabState();
-}
-
-class _VideosTabState extends State<_VideosTab> {
-  String? selectedCategory;
-  bool showCategoryAccordion = false;
-  
-  final categories = {
-    'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
-    'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
-    'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
-    'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
-    'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
-  };
-
-  Future<List<Map<String, dynamic>>> _loadTopVideos() async {
-    return await CacheService.getRecentVideos(); // Usar caché de videos recientes
-  }
-  
-  Future<List<Map<String, dynamic>>> _loadRecentVideos() async {
-    return await CacheService.getRecentVideos();
-  }
-  
-  Future<List<Map<String, dynamic>>> _loadRecommendedVideos() async {
-    // Usar datos en caché para recomendaciones
-    final recent = await CacheService.getRecentVideos();
-    return recent.take(3).toList();
-  }
-
-  Widget _buildVideoList(List<Map<String, dynamic>> videos, BuildContext context) {
-    return SizedBox(
-      height: 200,
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
-          ),
-          Expanded(
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: videos.length,
-              itemBuilder: (context, index) {
-                final video = videos[index];
-                return Container(
-                  width: 280,
-                  margin: const EdgeInsets.only(right: 16),
-                  child: Stack(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => YouTubeVideoPlayer(video: video),
-                          ),
-                        ),
-                        child: GlassmorphicContainer(
-                          width: double.infinity,
-                          height: double.infinity,
-                          borderRadius: 12,
-                          blur: 10,
-                          alignment: Alignment.center,
-                          border: 0,
-                          linearGradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.1),
-                              Colors.white.withOpacity(0.05),
-                            ],
-                          ),
-                          borderGradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.2),
-                              Colors.white.withOpacity(0.1),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                  child: video['thumbnail_url'] != null
-                                      ? Image.network(
-                                          video['thumbnail_url'],
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Container(
-                                            color: Colors.grey.shade800,
-                                            child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
-                                          ),
-                                        )
-                                      : Container(
-                                          color: Colors.grey.shade800,
-                                          child: const Icon(Icons.video_library, size: 40, color: Colors.white54),
-                                        ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          video['title'] ?? 'Sin título',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          video['category'] ?? 'Sin categoría',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 10,
-                                            color: Colors.white70,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      if (video['views'] != null)
-                                        Flexible(
-                                          child: Text(
-                                            '${video['views']} vistas',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 9,
-                                              color: Colors.white54,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (widget.canEdit && (widget.userRole == 'bibliotecario' || widget.userRole == 'admin'))
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: PopupMenuButton<String>(
-                            icon: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.more_vert, color: Colors.white, size: 16),
-                            ),
-                            onSelected: (value) {
-                              if (value == 'edit') {
-                                _editVideo(context, video);
-                              } else if (value == 'delete' && widget.userRole == 'admin') {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor: const Color(0xFF1E293B),
-                                    title: Text('Eliminar video', style: GoogleFonts.outfit(color: Colors.white)),
-                                    content: Text('¿Seguro que quieres eliminar este video?', style: GoogleFonts.outfit(color: Colors.white70)),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          Navigator.pop(context);
-                                          try {
-                                            await Supabase.instance.client.from('videos').delete().eq('id', video['id']);
-                                            // Limpiar caché de videos
-                                            CacheService.clearVideosCache();
-                                            if (mounted) {
-                                              setState(() {});
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Video eliminado correctamente', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
-                                              );
-                                            }
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Error al eliminar: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
-                                              );
-                                            }
-                                          }
-                                        },
-                                        child: Text('Eliminar', style: GoogleFonts.outfit(color: Colors.red)),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit, size: 16),
-                                    SizedBox(width: 8),
-                                    Text('Editar'),
-                                  ],
-                                ),
-                              ),
-                              if (widget.userRole == 'admin')
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete, size: 16, color: Colors.red),
-                                      SizedBox(width: 8),
-                                      Text('Eliminar', style: TextStyle(color: Colors.red)),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.arrow_forward_ios, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editVideo(BuildContext context, Map<String, dynamic> video) {
-    final titleController = TextEditingController(text: video['title'] ?? '');
-    final thumbnailController = TextEditingController(text: video['thumbnail_url'] ?? '');
-    final descriptionController = TextEditingController(text: video['description'] ?? '');
-    
-    String selectedCategory = video['category'] ?? 'Desarrollo de Software';
-    String selectedSubcategory = video['subcategory'] ?? 'Frontend';
-    
-    final categories = {
-      'Desarrollo de Software': ['Frontend', 'Backend', 'Móvil', 'Base de Datos'],
-      'Marketing': ['Digital', 'Tradicional', 'Redes Sociales', 'SEO'],
-      'Guía Nacional de Turismo': ['Costas', 'Sierra', 'Oriente', 'Galápagos'],
-      'Arte Culinaria': ['Cocina Nacional', 'Cocina Internacional', 'Repostería', 'Bebidas'],
-      'Idiomas': ['Inglés', 'Francés', 'Alemán', 'Italiano']
-    };
-    
-    if (!categories.containsKey(selectedCategory)) {
-      selectedCategory = 'Desarrollo de Software';
-    }
-    if (!categories[selectedCategory]!.contains(selectedSubcategory)) {
-      selectedSubcategory = categories[selectedCategory]!.first;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Editar: ${video['title']}'),
-          content: SizedBox(
-            width: 500,
-            height: 400,
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Título'),
-                    controller: titleController,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'URL de miniatura'),
-                    controller: thumbnailController,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    decoration: const InputDecoration(labelText: 'Categoría'),
-                    items: categories.keys.map((category) {
-                      return DropdownMenuItem(value: category, child: Text(category));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedCategory = value!;
-                        selectedSubcategory = categories[value]!.first;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(selectedCategory),
-                    value: selectedSubcategory,
-                    decoration: const InputDecoration(labelText: 'Subcategoría'),
-                    items: categories[selectedCategory]!.map((subcategory) {
-                      return DropdownMenuItem(value: subcategory, child: Text(subcategory));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedSubcategory = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Descripción'),
-                    controller: descriptionController,
-                    maxLines: 3,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  await Supabase.instance.client
-                      .from('videos')
-                      .update({
-                        'title': titleController.text,
-                        'thumbnail_url': thumbnailController.text,
-                        'category': selectedCategory,
-                        'subcategory': selectedSubcategory,
-                        'description': descriptionController.text,
-                      })
-                      .eq('id', video['id']);
-                  
-                  Navigator.pop(context);
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Video actualizado correctamente')),
-                  );
-                } catch (e) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    if (selectedCategory != null) {
-      return CategoryVideosView(
-        category: selectedCategory!,
-        onBack: () => setState(() => selectedCategory = null),
-        canEdit: widget.canEdit,
-        userRole: widget.userRole,
-      );
-    }
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                showCategoryAccordion = !showCategoryAccordion;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.yaviracOrange.withOpacity(0.2),
-                    AppColors.yaviracBlueDark.withOpacity(0.2),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.yaviracOrange.withOpacity(0.4),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.yaviracOrange.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: AppColors.avatarGradient,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.category, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Explorar Categorías',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      showCategoryAccordion ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      color: AppColors.yaviracOrange,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (showCategoryAccordion)
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.yaviracOrange.withOpacity(0.3),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: categories.keys.map((category) {
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            selectedCategory = category;
-                            showCategoryAccordion = false;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.yaviracOrange.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(Icons.folder, color: Colors.white, size: 16),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  category,
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                color: AppColors.yaviracOrange,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          
-          const SizedBox(height: 32),
-          
-          // Top 10 Videos
-          Text(
-            'Top 10 Videos',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _loadTopVideos(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(height: 200, child: Center(child: Text('No hay videos populares', style: GoogleFonts.outfit(color: Colors.white70))));
-              }
-              return _buildVideoList(snapshot.data!, context);
-            },
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Videos Recientes
-          Text(
-            'Videos Recientes',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _loadRecentVideos(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(height: 200, child: Center(child: Text('No hay videos recientes', style: GoogleFonts.outfit(color: Colors.white70))));
-              }
-              return _buildVideoList(snapshot.data!, context);
-            },
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Videos Recomendados
-          Text(
-            'Videos Recomendados',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _loadRecommendedVideos(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Colors.white)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(height: 200, child: Center(child: Text('No hay videos recomendados', style: GoogleFonts.outfit(color: Colors.white70))));
-              }
-              return _buildVideoList(snapshot.data!, context);
-            },
-          ),
-        ],
       ),
     );
   }
@@ -2156,7 +839,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: GlassTheme.primaryColor),
+                    borderSide: BorderSide(color: AppColors.yaviracOrange),
                   ),
                 ),
               ),
@@ -2172,7 +855,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: GlassTheme.primaryColor),
+                    borderSide: BorderSide(color: AppColors.yaviracOrange),
                   ),
                 ),
               ),
@@ -2188,7 +871,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: GlassTheme.primaryColor),
+                    borderSide: BorderSide(color: AppColors.yaviracOrange),
                   ),
                 ),
               ),
@@ -2201,7 +884,7 @@ class _ProfileTabState extends State<_ProfileTab> {
             child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: GlassTheme.primaryColor),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.yaviracOrange),
             onPressed: () async {
               await _updateUserData(context, nameController.text, passwordController.text, confirmPasswordController.text);
             },
@@ -2533,7 +1216,7 @@ class _SearchResultsTab extends StatelessWidget {
                         ),
                         borderGradient: LinearGradient(
                           colors: [
-                            GlassTheme.primaryColor.withOpacity(0.3),
+                            AppColors.yaviracOrange.withOpacity(0.3),
                             Colors.white.withOpacity(0.1),
                           ],
                         ),
@@ -2551,12 +1234,12 @@ class _SearchResultsTab extends StatelessWidget {
                                           fit: BoxFit.cover,
                                           width: double.infinity,
                                           errorBuilder: (_, __, ___) => Container(
-                                            color: GlassTheme.primaryColor.withOpacity(0.2),
+                                            color: AppColors.yaviracOrange.withOpacity(0.2),
                                             child: const Icon(Icons.search, size: 30, color: Colors.white),
                                           ),
                                         )
                                       : Container(
-                                          color: GlassTheme.primaryColor.withOpacity(0.2),
+                                          color: AppColors.yaviracOrange.withOpacity(0.2),
                                           child: const Icon(Icons.search, size: 30, color: Colors.white),
                                         ),
                                 ),
@@ -2616,7 +1299,16 @@ class _TopBooksTab extends StatefulWidget {
 class _TopBooksTabState extends State<_TopBooksTab> {
   
   Future<List<Map<String, dynamic>>> _loadTopBooks() async {
-    return await CacheService.getTopBooks();
+    try {
+      final response = await Supabase.instance.client
+          .from('book_stats')
+          .select('*, books(*)')
+          .order('open_count', ascending: false)
+          .limit(10);
+      return response;
+    } catch (e) {
+      return [];
+    }
   }
 
   @override
@@ -2679,7 +1371,7 @@ class _TopBooksTabState extends State<_TopBooksTab> {
                         ),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: GlassTheme.primaryColor,
+                            backgroundColor: AppColors.yaviracOrange,
                             foregroundColor: Colors.white,
                             child: Text('${index + 1}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
                           ),

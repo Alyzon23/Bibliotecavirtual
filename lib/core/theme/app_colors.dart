@@ -15,17 +15,16 @@ class AppColors {
     colors: [yaviracBlue, yaviracBlueLight],
   );
   
-  static const LinearGradient sidebarGradient = LinearGradient(
+  // Gradiente diagonal reutilizable
+  static const LinearGradient diagonalGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [yaviracBlueDark, yaviracOrange],
   );
   
-  static const LinearGradient avatarGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [yaviracBlueDark, yaviracOrange],
-  );
+  // Alias para compatibilidad
+  static const LinearGradient sidebarGradient = diagonalGradient;
+  static const LinearGradient avatarGradient = diagonalGradient;
   
   static const LinearGradient roleGradient = LinearGradient(
     colors: [yaviracBlue, Colors.white],
@@ -62,17 +61,14 @@ class AppColors {
   }
   
   // Sombras
-  static BoxShadow get primaryShadow => BoxShadow(
+  static BoxShadow get _defaultShadow => BoxShadow(
     color: yaviracBlueDark.withOpacity(0.3),
     blurRadius: 20,
     offset: const Offset(0, 10),
   );
   
-  static BoxShadow get avatarShadow => BoxShadow(
-    color: yaviracBlueDark.withOpacity(0.3),
-    blurRadius: 20,
-    offset: const Offset(0, 10),
-  );
+  static BoxShadow get primaryShadow => _defaultShadow;
+  static BoxShadow get avatarShadow => _defaultShadow;
   
   static BoxShadow get logoutShadow => BoxShadow(
     color: const Color(0xFFF093FB).withOpacity(0.3),

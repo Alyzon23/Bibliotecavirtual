@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Servicio de debug para desarrollo (solo usar en modo debug)
 class DebugService {
   static final _supabase = Supabase.instance.client;
 
@@ -49,7 +50,10 @@ class DebugService {
   /// Limpia todos los favoritos del usuario actual (solo para debug)
   static Future<void> clearUserFavorites() async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('❌ No hay usuario autenticado');
+      return;
+    }
 
     try {
       await _supabase

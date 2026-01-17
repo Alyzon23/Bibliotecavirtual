@@ -141,7 +141,8 @@ class _AddBookScreenState extends State<AddBookScreen> {
 
       if (mounted) {
         // Limpiar caché para actualizar las listas
-        CacheService.clearBooksCache();
+        CacheService.remove('recent_books_stats');
+        CacheService.remove('top_books_stats');
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

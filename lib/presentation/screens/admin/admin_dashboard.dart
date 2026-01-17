@@ -234,10 +234,7 @@ class _BooksTabState extends State<_BooksTab> {
           .delete()
           .eq('id', bookId);
       
-      // Limpiar caché de libros
-      CacheService.clearBooksCache();
-      
-      // Forzar recarga de datos
+      // Refresh UI
       if (mounted) {
         setState(() {}); // Refresh UI
         ScaffoldMessenger.of(context).showSnackBar(
@@ -424,10 +421,7 @@ class _VideosTabState extends State<_VideosTab> {
           .delete()
           .eq('id', videoId);
       
-      // Limpiar caché de videos
-      CacheService.clearVideosCache();
-      
-      // Forzar recarga de datos
+      // Refresh UI
       if (mounted) {
         setState(() {}); // Refresh UI
         ScaffoldMessenger.of(context).showSnackBar(

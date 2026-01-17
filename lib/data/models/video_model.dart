@@ -1,3 +1,4 @@
+/// Modelo para videos en la biblioteca
 class VideoModel {
   final String id;
   final String title;

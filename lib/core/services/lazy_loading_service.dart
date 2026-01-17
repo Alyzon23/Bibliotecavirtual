@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+/// Servicio para cargar widgets de forma lazy con caché
 class LazyLoadingService {
   static final Map<String, Widget> _cache = {};
   static final Map<String, Future<Widget>> _loading = {};
 
   /// Carga un widget de forma lazy con caché
+  /// Si el widget ya está en caché, lo devuelve inmediatamente
+  /// Si se está cargando, espera a que termine
   static Future<Widget> loadWidget(
     String key,
     Future<Widget> Function() builder,
@@ -34,7 +37,7 @@ class LazyLoadingService {
     }
   }
 
-  /// Widget que carga de forma lazy
+  /// Widget que carga de forma lazy con FutureBuilder
   static Widget lazyWidget(
     String key,
     Future<Widget> Function() builder, {
@@ -69,13 +72,13 @@ class LazyLoadingService {
     }
   }
 
-  /// Limpiar caché
+  /// Limpia todo el caché
   static void clearCache() {
     _cache.clear();
     _loading.clear();
   }
 
-  /// Remover un widget específico del caché
+  /// Elimina un widget específico del caché
   static void removeFromCache(String key) {
     _cache.remove(key);
     _loading.remove(key);

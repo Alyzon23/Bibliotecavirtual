@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'dart:html' as html;
-import 'dart:ui_web' as ui;
+import 'dart:ui_web' as ui_web;
 
 class YouTubeVideoPlayer extends StatefulWidget {
   final Map<String, dynamic> video;
@@ -14,74 +16,56 @@ class YouTubeVideoPlayer extends StatefulWidget {
 }
 
 class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
-  late String viewId;
   bool _hasError = false;
   String? _originalUrl;
+  YoutubePlayerController? _mobileController;
 
   @override
   void initState() {
     super.initState();
-    viewId = 'video-${widget.video['id']}';
-    _registerVideoPlayer();
+    
+    if (!kIsWeb) {
+      _initMobilePlayer();
+    }
   }
 
-  void _registerVideoPlayer() {
-    final videoIdField = widget.video['video_id'] ?? '';
-    
-    if (videoIdField.isEmpty) {
-      setState(() => _hasError = true);
-      return;
-    }
-    
-    String? embedUrl;
-    
-    // Detectar si es URL de YouTube
-    if (videoIdField.contains('youtube.com/watch?v=')) {
-      final videoId = videoIdField.split('v=')[1].split('&')[0];
-      embedUrl = 'https://www.youtube.com/embed/$videoId?enablejsapi=1';
-      _originalUrl = videoIdField; // Guardar URL original para fallback
-    } 
-    // Detectar si es archivo MP4 de Supabase
-    else if (videoIdField.contains('.mp4')) {
-      embedUrl = videoIdField;
-    }
-    // Asumir que es solo el ID de YouTube
-    else {
-      embedUrl = 'https://www.youtube.com/embed/$videoIdField?enablejsapi=1';
-      _originalUrl = 'https://www.youtube.com/watch?v=$videoIdField';
-    }
-    
-    // Crear elemento apropiado
-    html.Element element;
-    
-    if (videoIdField.contains('.mp4')) {
-      // Para archivos MP4, usar video element
-      element = html.VideoElement()
-        ..src = embedUrl!
-        ..controls = true
-        ..autoplay = false
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..style.border = 'none';
-    } else {
-      // Para YouTube, usar iframe con manejo de errores
-      element = html.IFrameElement()
-        ..src = embedUrl!
-        ..style.border = 'none'
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..allowFullscreen = true;
+  void _initMobilePlayer() {
+    try {
+      final videoIdField = widget.video['video_id'] ?? '';
       
-      // Detectar errores de carga
-      element.onError.listen((event) {
+      if (videoIdField.isEmpty) {
         setState(() => _hasError = true);
-      });
+        return;
+      }
+      
+      String? videoId;
+      
+      // Extraer ID de YouTube
+      if (videoIdField.contains('youtube.com/watch?v=')) {
+        videoId = videoIdField.split('v=')[1].split('&')[0];
+        _originalUrl = videoIdField;
+      } else if (videoIdField.contains('youtu.be/')) {
+        videoId = videoIdField.split('youtu.be/')[1].split('?')[0];
+        _originalUrl = 'https://www.youtube.com/watch?v=$videoId';
+      } else if (!videoIdField.contains('.mp4')) {
+        videoId = videoIdField;
+        _originalUrl = 'https://www.youtube.com/watch?v=$videoId';
+      }
+      
+      if (videoId != null && videoId.isNotEmpty) {
+        _mobileController = YoutubePlayerController(
+          initialVideoId: videoId,
+          flags: const YoutubePlayerFlags(
+            autoPlay: false,
+            mute: false,
+          ),
+        );
+      } else {
+        setState(() => _hasError = true);
+      }
+    } catch (e) {
+      setState(() => _hasError = true);
     }
-
-    ui.platformViewRegistry.registerViewFactory(
-      viewId,
-      (int id) => element,
-    );
   }
 
   Future<void> _openInYouTube() async {
@@ -91,6 +75,96 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     }
+  }
+
+  Widget _buildWebPlayer() {
+    try {
+      final videoIdField = widget.video['video_id'] ?? '';
+      
+      if (videoIdField.isEmpty) {
+        return _buildErrorWidget();
+      }
+      
+      String? videoId;
+      
+      // Extraer ID de YouTube
+      if (videoIdField.contains('youtube.com/watch?v=')) {
+        videoId = videoIdField.split('v=')[1].split('&')[0];
+        _originalUrl = videoIdField;
+      } else if (videoIdField.contains('youtu.be/')) {
+        videoId = videoIdField.split('youtu.be/')[1].split('?')[0];
+        _originalUrl = 'https://www.youtube.com/watch?v=$videoId';
+      } else if (!videoIdField.contains('.mp4')) {
+        videoId = videoIdField;
+        _originalUrl = 'https://www.youtube.com/watch?v=$videoId';
+      }
+      
+      if (videoId != null && videoId.isNotEmpty) {
+        final viewType = 'youtube-iframe-$videoId';
+        
+        // Registrar el iframe solo una vez
+        ui_web.platformViewRegistry.registerViewFactory(
+          viewType,
+          (int viewId) {
+            final iframe = html.IFrameElement()
+              ..src = 'https://www.youtube.com/embed/$videoId?autoplay=0&controls=1'
+              ..style.border = 'none'
+              ..style.width = '100%'
+              ..style.height = '100%'
+              ..allowFullscreen = true;
+            return iframe;
+          },
+        );
+        
+        return Container(
+          width: double.infinity,
+          height: kIsWeb ? 400 : 250,
+          child: HtmlElementView(viewType: viewType),
+        );
+      } else {
+        return _buildErrorWidget();
+      }
+    } catch (e) {
+      return _buildErrorWidget();
+    }
+  }
+
+  Widget _buildErrorWidget() {
+    return Container(
+      color: Colors.grey.shade900,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white54, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              'Video no disponible',
+              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            if (_originalUrl != null) ...[
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _openInYouTube,
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Ver en YouTube'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _mobileController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -123,11 +197,17 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (_originalUrl != null)
+                    IconButton(
+                      icon: const Icon(Icons.open_in_new, color: Colors.white),
+                      onPressed: _openInYouTube,
+                    ),
                 ],
               ),
             ),
-            // YouTube Player o mensaje de error
-            Expanded(
+            // Player
+            Flexible(
+              flex: kIsWeb ? 2 : 1,
               child: _hasError 
                   ? Container(
                       color: Colors.grey.shade900,
@@ -148,14 +228,40 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
                               style: GoogleFonts.outfit(color: Colors.white54, fontSize: 14),
                               textAlign: TextAlign.center,
                             ),
+                            if (_originalUrl != null) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: _openInYouTube,
+                                icon: const Icon(Icons.play_arrow),
+                                label: const Text('Ver en YouTube'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     )
-                  : Container(
-                      width: double.infinity,
-                      child: HtmlElementView(viewType: viewId),
-                    ),
+                  : kIsWeb
+                      ? _buildWebPlayer()
+                      : _mobileController != null
+                          ? YoutubePlayer(
+                              controller: _mobileController!,
+                              showVideoProgressIndicator: true,
+                              progressIndicatorColor: Colors.red,
+                              progressColors: const ProgressBarColors(
+                                playedColor: Colors.red,
+                                handleColor: Colors.redAccent,
+                              ),
+                            )
+                          : Container(
+                              color: Colors.grey.shade900,
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
             ),
             // Video Info
             Container(

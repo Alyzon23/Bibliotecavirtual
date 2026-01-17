@@ -1,37 +1,39 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Servicio para crear usuarios de prueba (solo para desarrollo)
 class TestUsersService {
   static final _supabase = Supabase.instance.client;
 
-  static Future<void> createTestUsers() async {
-    final testUsers = [
-      {
-        'email': 'bibliotecario@yavirac.edu.ec',
-        'password': 'biblio123',
-        'name': 'Bibliotecario Yavirac',
-        'role': 'bibliotecario'
-      },
-      {
-        'email': 'admin@yavirac.edu.ec', 
-        'password': 'admin123',
-        'name': 'Administrador Yavirac',
-        'role': 'admin'
-      },
-      {
-        'email': 'profesor@yavirac.edu.ec',
-        'password': 'profe123', 
-        'name': 'Profesor Yavirac',
-        'role': 'profesor'
-      },
-      {
-        'email': 'lector@yavirac.edu.ec',
-        'password': 'lector123',
-        'name': 'Lector Yavirac', 
-        'role': 'lector'
-      }
-    ];
+  static const List<Map<String, String>> _testUsers = [
+    {
+      'email': 'bibliotecario@yavirac.edu.ec',
+      'password': 'biblio123',
+      'name': 'Bibliotecario Yavirac',
+      'role': 'bibliotecario'
+    },
+    {
+      'email': 'admin@yavirac.edu.ec', 
+      'password': 'admin123',
+      'name': 'Administrador Yavirac',
+      'role': 'admin'
+    },
+    {
+      'email': 'profesor@yavirac.edu.ec',
+      'password': 'profe123', 
+      'name': 'Profesor Yavirac',
+      'role': 'profesor'
+    },
+    {
+      'email': 'lector@yavirac.edu.ec',
+      'password': 'lector123',
+      'name': 'Lector Yavirac', 
+      'role': 'lector'
+    }
+  ];
 
-    for (var user in testUsers) {
+  /// Crea usuarios de prueba en la base de datos
+  static Future<void> createTestUsers() async {
+    for (var user in _testUsers) {
       try {
         print('Creando usuario: ${user['email']}');
         

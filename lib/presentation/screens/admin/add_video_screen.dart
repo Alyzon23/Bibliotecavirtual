@@ -60,7 +60,7 @@ class _AddVideoScreenState extends State<AddVideoScreen> {
       });
 
       if (mounted) {
-        CacheService.clearVideosCache();
+        CacheService.remove('recent_videos');
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

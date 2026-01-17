@@ -5,7 +5,6 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   flutter_inappwebview_windows
-  syncfusion_pdfviewer_windows
   url_launcher_windows
 )
 

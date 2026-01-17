@@ -1,5 +1,8 @@
+import '../services/enum_converter.dart';
+
 enum UserRole { admin, bibliotecario, profesor, lector }
 
+/// Modelo para usuarios de la aplicación
 class User {
   final String id;
   final String email;
@@ -20,13 +23,12 @@ class User {
       id: json['id'],
       email: json['email'],
       name: json['name'],
-      role: UserRole.values.firstWhere(
-        (e) => e.toString().split('.').last == json['role'],
-      ),
+      role: EnumConverter.parseUserRole(json['role']),
       createdAt: DateTime.parse(json['createdAt']),
     );
   }
 
+  // Getters para verificar rol
   bool get isAdmin => role == UserRole.admin;
   bool get isBibliotecario => role == UserRole.bibliotecario;
   bool get isProfesor => role == UserRole.profesor;

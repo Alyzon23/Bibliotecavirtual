@@ -1,140 +1,93 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Biblioteca Virtual Yavirac - Accede a miles de libros y videos educativos">
+  <meta name="description" content="Biblioteca Virtual - Gestión de libros digitales">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2196F3">
 
-  <!-- Preload critical resources -->
-  <link rel="preload" href="main.dart.js" as="script">
-  <link rel="preload" href="flutter.js" as="script">
-  
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Biblioteca Virtual Yavirac">
+  <meta name="apple-mobile-web-app-title" content="biblioteca_digital">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Biblioteca Virtual Yavirac</title>
+  <title>biblioteca_digital</title>
   <link rel="manifest" href="manifest.json">
-  
+
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      overflow: hidden;
-    }
-    
-    .loading-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+    .loading {
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
-      z-index: 9999;
-    }
-    
-    .loading-logo {
-      width: 80px;
-      height: 80px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
-      display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
-      animation: pulse 2s infinite;
+      height: 100vh;
+      font-family: 'Roboto', sans-serif;
     }
-    
-    .loading-text {
-      color: white;
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    
-    .loading-subtitle {
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 16px;
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    
-    .loading-spinner {
+    .spinner {
       width: 40px;
       height: 40px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top: 3px solid white;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2196F3;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.8; }
-    }
-    
-    .fade-out {
-      opacity: 0;
-      transition: opacity 0.5s ease-out;
+    .loading-text {
+      margin-top: 20px;
+      color: #666;
     }
   </style>
-</head>
-<body>
-  <div id="loading" class="loading-container">
-    <div class="loading-logo">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
-        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-      </svg>
-    </div>
-    <div class="loading-text">Biblioteca Virtual Yavirac</div>
-    <div class="loading-subtitle">Cargando tu biblioteca digital...</div>
-    <div class="loading-spinner"></div>
-  </div>
   
   <script>
-    // Ocultar splash screen cuando Flutter esté listo
-    window.addEventListener('flutter-first-frame', function () {
-      const loading = document.getElementById('loading');
-      if (loading) {
-        loading.classList.add('fade-out');
-        setTimeout(() => {
-          loading.style.display = 'none';
-        }, 500);
-      }
-    });
-    
-    // Fallback: ocultar después de 10 segundos
-    setTimeout(() => {
-      const loading = document.getElementById('loading');
-      if (loading && loading.style.display !== 'none') {
-        loading.classList.add('fade-out');
-        setTimeout(() => {
-          loading.style.display = 'none';
-        }, 500);
-      }
-    }, 10000);
+    const serviceWorkerVersion = null;
   </script>
-  
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter.js" defer></script>
+  <script>
+    window.addEventListener('load', function(ev) {
+      const loading = document.querySelector('#loading');
+      
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+            if (loading) loading.remove();
+          });
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Cargando Biblioteca Virtual...</div>
+  </div>
 </body>
 </html>

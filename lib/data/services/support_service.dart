@@ -1,10 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/support_request_model.dart';
+import 'enum_converter.dart';
 
+/// Servicio para gestionar solicitudes de soporte
 class SupportService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  // Crear nueva solicitud
+  /// Crea una nueva solicitud de soporte
   Future<bool> createRequest({
     required String title,
     required String description,
@@ -18,8 +20,8 @@ class SupportService {
         'user_id': user.id,
         'title': title,
         'description': description,
-        'type': type.toString().split('.').last,
-        'status': 'pendiente',
+        'type': EnumConverter.requestTypeToString(type),
+        'status': EnumConverter.requestStatusToString(RequestStatus.pendiente),
       });
 
       return true;
@@ -29,7 +31,7 @@ class SupportService {
     }
   }
 
-  // Obtener solicitudes del usuario actual
+  /// Obtiene las solicitudes del usuario actual
   Future<List<SupportRequest>> getUserRequests() async {
     try {
       final user = _client.auth.currentUser;
@@ -41,19 +43,14 @@ class SupportService {
           .eq('user_id', user.id)
           .order('created_at', ascending: false);
 
-      return response.map<SupportRequest>((json) {
-        // Agregar datos del usuario al JSON
-        json['user_name'] = json['users']?['name'];
-        json['user_email'] = json['users']?['email'];
-        return SupportRequest.fromJson(json);
-      }).toList();
+      return _mapToSupportRequests(response);
     } catch (e) {
       print('Error fetching user requests: $e');
       return [];
     }
   }
 
-  // Obtener todas las solicitudes (solo para admins)
+  /// Obtiene todas las solicitudes (solo para admins)
   Future<List<SupportRequest>> getAllRequests() async {
     try {
       final response = await _client
@@ -61,23 +58,18 @@ class SupportService {
           .select('*, users(name, email)')
           .order('created_at', ascending: false);
 
-      return response.map<SupportRequest>((json) {
-        // Agregar datos del usuario al JSON
-        json['user_name'] = json['users']?['name'];
-        json['user_email'] = json['users']?['email'];
-        return SupportRequest.fromJson(json);
-      }).toList();
+      return _mapToSupportRequests(response);
     } catch (e) {
       print('Error fetching all requests: $e');
       return [];
     }
   }
 
-  // Marcar solicitud como resuelta (solo para admins)
+  /// Marca una solicitud como resuelta
   Future<bool> markAsResolved(String requestId) async {
     try {
       await _client.from('support_requests').update({
-        'status': 'resuelto',
+        'status': EnumConverter.requestStatusToString(RequestStatus.resuelto),
         'resolved_at': DateTime.now().toIso8601String(),
       }).eq('id', requestId);
 
@@ -88,7 +80,7 @@ class SupportService {
     }
   }
 
-  // Eliminar solicitud (solo para admins)
+  /// Elimina una solicitud
   Future<bool> deleteRequest(String requestId) async {
     try {
       await _client.from('support_requests').delete().eq('id', requestId);
@@ -97,5 +89,14 @@ class SupportService {
       print('Error deleting request: $e');
       return false;
     }
+  }
+
+  /// Mapea respuestas JSON a objetos SupportRequest
+  List<SupportRequest> _mapToSupportRequests(List<dynamic> response) {
+    return response.map<SupportRequest>((json) {
+      json['user_name'] = json['users']?['name'];
+      json['user_email'] = json['users']?['email'];
+      return SupportRequest.fromJson(json);
+    }).toList();
   }
 }

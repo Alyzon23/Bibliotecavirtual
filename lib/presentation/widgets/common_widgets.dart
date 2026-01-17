@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
-import '../../data/services/cache_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/user/book_detail_screen.dart';
 
 // Widgets const reutilizables
@@ -209,8 +209,12 @@ class LoadingPlaceholder extends StatelessWidget {
 class DataService {
   static Future<List<Map<String, dynamic>>> getTopBooks() async {
     try {
-      final cached = await CacheService.getTopBooks();
-      return cached.map((item) => item['books'] as Map<String, dynamic>).toList();
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(10);
+      return response;
     } catch (e) {
       return [];
     }
@@ -218,7 +222,12 @@ class DataService {
   
   static Future<List<Map<String, dynamic>>> getRecentBooks() async {
     try {
-      return await CacheService.getRecentBooks();
+      final response = await Supabase.instance.client
+          .from('books')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(20);
+      return response;
     } catch (e) {
       return [];
     }
@@ -226,7 +235,12 @@ class DataService {
   
   static Future<List<Map<String, dynamic>>> getRecentVideos() async {
     try {
-      return await CacheService.getRecentVideos();
+      final response = await Supabase.instance.client
+          .from('videos')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(20);
+      return response;
     } catch (e) {
       return [];
     }

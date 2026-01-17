@@ -1,3 +1,4 @@
+/// Modelo para libros en la biblioteca
 class BookModel {
   final String id;
   final String title;
@@ -70,4 +71,5 @@ class BookModel {
   }
 }
 
+/// Formatos de archivo soportados
 enum BookFormat { pdf, epub }
