@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/theme/optimized_theme.dart';
 import '../../../../data/services/cache_service.dart';
 import '../category_videos_view.dart';
 import '../../../widgets/category_accordion.dart';
@@ -89,7 +89,7 @@ class _VideosTabState extends State<VideosTab> {
       children: [
         Text(
           title,
-          style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          style: OptimizedTheme.heading3.copyWith(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         VideoListWidget(

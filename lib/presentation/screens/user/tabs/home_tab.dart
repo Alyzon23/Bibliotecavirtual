@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/optimized_theme.dart';
 import '../../../../data/services/cache_service.dart';
 import '../../../widgets/common_widgets.dart';
 
@@ -48,16 +48,15 @@ class HomeTab extends StatelessWidget {
             children: [
               Text(
                 '¡Bienvenido!',
-                style: GoogleFonts.poppins(
+                style: OptimizedTheme.heading1.copyWith(
                   fontSize: 32,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Descubre miles de libros y videos educativos',
-                style: GoogleFonts.poppins(
+                style: OptimizedTheme.bodyText.copyWith(
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.9),
                 ),
@@ -111,10 +110,9 @@ class HomeTab extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   'Top 10 Más Leídos',
-                  style: GoogleFonts.outfit(
+                  style: OptimizedTheme.heading3.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
                   ),
                 ),
               ],

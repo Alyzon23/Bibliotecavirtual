@@ -1,12 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../../data/services/supabase_auth_service.dart';
 import '../../../core/services/lazy_loading_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/optimized_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../auth/login_screen.dart';
 import '../../../main.dart';
@@ -17,7 +18,9 @@ import '../admin/add_book_screen.dart';
 import '../admin/add_video_screen.dart';
 import 'users_management_screen.dart';
 import 'book_detail_screen.dart';
-import '../../../data/services/cache_service.dart';
+import '../../../core/services/optimized_cache_service.dart';
+import '../../../core/widgets/lazy_tab_view.dart';
+import '../../widgets/optimized_modals.dart';
 
 class UserHome extends StatefulWidget {
   final SupabaseAuthService authService;
@@ -28,7 +31,7 @@ class UserHome extends StatefulWidget {
   State<UserHome> createState() => _UserHomeState();
 }
 
-class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
+class _UserHomeState extends State<UserHome> with LazyLoadingMixin, TickerProviderStateMixin {
   int _selectedIndex = 0;
   String _userName = 'Usuario';
   String _userRole = 'usuario';
@@ -36,11 +39,15 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
   String _searchQuery = '';
   final ValueNotifier<bool> _searchingNotifier = ValueNotifier<bool>(false);
   bool _canEdit = false;
+  late TabController _tabController;
+  final Map<int, Widget> _cachedTabs = {};
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 9, vsync: this);
     _loadUserDataAsync();
+    OptimizedCacheService.instance.init();
   }
 
   void _loadUserDataAsync() {
@@ -53,6 +60,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
   void dispose() {
     _searchingNotifier.dispose();
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -113,11 +121,19 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
   }
 
   Widget _getSelectedPage() {
+    // Usar caché para evitar recrear widgets
+    if (!_cachedTabs.containsKey(_selectedIndex)) {
+      _cachedTabs[_selectedIndex] = _createTab(_selectedIndex);
+    }
+    return _cachedTabs[_selectedIndex]!;
+  }
+
+  Widget _createTab(int index) {
     if (_searchQuery.isNotEmpty) {
       return _SearchResultsTab(searchQuery: _searchQuery);
     }
     
-    switch (_selectedIndex) {
+    switch (index) {
       case 0:
         return HomeTab(searchQuery: _searchQuery);
       case 1:
@@ -285,11 +301,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                   child: Center(
                     child: Text(
                       _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: OptimizedTheme.heading3.copyWith(fontSize: 18),
                     ),
                   ),
                 ),
@@ -300,11 +312,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                     children: [
                       Text(
                         _userName,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: OptimizedTheme.bodyText.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Container(
@@ -315,7 +323,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                         ),
                         child: Text(
                           _userRole.toUpperCase(),
-                          style: GoogleFonts.poppins(
+                          style: OptimizedTheme.caption.copyWith(
                             color: AppColors.getRoleTextColor(_userRole),
                             fontSize: 8,
                             fontWeight: FontWeight.w600,
@@ -384,11 +392,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                   const SizedBox(width: 8),
                   Text(
                     'Cerrar Sesión',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: OptimizedTheme.bodyText.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -440,10 +444,9 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
             if (!isMobile) const Spacer(),
             Text(
               'Biblioteca Virtual Yavirac',
-              style: GoogleFonts.outfit(
+              style: OptimizedTheme.heading2.copyWith(
                 fontSize: isMobile ? 18 : 24,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
                 letterSpacing: -0.5,
               ),
             ),
@@ -453,7 +456,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
             if (!isMobile) const SizedBox(width: 12),
             if (!isMobile) Text(
               _userName,
-              style: GoogleFonts.outfit(
+              style: OptimizedTheme.bodyText.copyWith(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: Colors.white70,
@@ -491,10 +494,10 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  style: GoogleFonts.outfit(color: Colors.grey.shade800, fontSize: 14),
+                  style: OptimizedTheme.bodyText.copyWith(color: Colors.grey.shade800, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Buscar...',
-                    hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400, fontSize: 14),
+                    hintStyle: OptimizedTheme.bodyTextSmall.copyWith(color: Colors.grey.shade400, fontSize: 14),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -558,6 +561,8 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
               if (onTap != null) {
                 onTap();
               } else if (index >= 0) {
+                // Limpiar caché cuando cambia de tab
+                _cachedTabs.clear();
                 setState(() => _selectedIndex = index);
               }
             },
@@ -570,8 +575,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin {
                   const SizedBox(width: 16),
                   Text(
                     title,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
+                    style: OptimizedTheme.bodyText.copyWith(
                       fontSize: 16,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     ),
@@ -616,7 +620,7 @@ class _FavoritesTab extends StatelessWidget {
         children: [
           Text(
             'Mis Favoritos',
-            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            style: OptimizedTheme.heading2,
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -636,7 +640,7 @@ class _FavoritesTab extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'No tienes favoritos aún',
-                          style: GoogleFonts.outfit(fontSize: 18, color: Colors.white54),
+                          style: OptimizedTheme.heading3.copyWith(fontSize: 18, color: Colors.white54),
                         ),
                       ],
                     ),
@@ -709,10 +713,9 @@ class _FavoritesTab extends StatelessWidget {
                                 padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
                                 child: Text(
                                   book['title'] ?? 'Sin título',
-                                  style: GoogleFonts.outfit(
+                                  style: OptimizedTheme.caption.copyWith(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white,
                                   ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
@@ -771,11 +774,11 @@ class _ProfileTabState extends State<_ProfileTab> {
                 children: [
                   Text(
                     userData['name']!,
-                    style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: OptimizedTheme.heading2,
                   ),
                   Text(
                     userData['email']!,
-                    style: GoogleFonts.outfit(color: Colors.white70),
+                    style: OptimizedTheme.bodyTextSmall,
                   ),
                 ],
               );
@@ -823,7 +826,7 @@ class _ProfileTabState extends State<_ProfileTab> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: Text('Configuración', style: GoogleFonts.outfit(color: Colors.white)),
+        title: Text('Configuración', style: OptimizedTheme.heading3),
         content: SizedBox(
           width: 400,
           child: Column(
@@ -831,10 +834,10 @@ class _ProfileTabState extends State<_ProfileTab> {
             children: [
               TextField(
                 controller: nameController,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: OptimizedTheme.bodyText,
                 decoration: InputDecoration(
                   labelText: 'Nuevo nombre',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  labelStyle: OptimizedTheme.bodyTextSmall,
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
@@ -846,11 +849,11 @@ class _ProfileTabState extends State<_ProfileTab> {
               const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: OptimizedTheme.bodyText,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: 'Nueva contraseña',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  labelStyle: OptimizedTheme.bodyTextSmall,
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
@@ -862,11 +865,11 @@ class _ProfileTabState extends State<_ProfileTab> {
               const SizedBox(height: 16),
               TextField(
                 controller: confirmPasswordController,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: OptimizedTheme.bodyText,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: 'Confirmar contraseña',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                  labelStyle: OptimizedTheme.bodyTextSmall,
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
@@ -881,14 +884,14 @@ class _ProfileTabState extends State<_ProfileTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+            child: Text('Cancelar', style: OptimizedTheme.bodyTextSmall),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.yaviracOrange),
             onPressed: () async {
               await _updateUserData(context, nameController.text, passwordController.text, confirmPasswordController.text);
             },
-            child: Text('Guardar', style: GoogleFonts.outfit(color: Colors.white)),
+            child: Text('Guardar', style: OptimizedTheme.bodyText),
           ),
         ],
       ),
@@ -906,7 +909,7 @@ class _ProfileTabState extends State<_ProfileTab> {
           children: [
             const Icon(Icons.help, color: Colors.white),
             const SizedBox(width: 8),
-            Text('Ayuda y Soporte', style: GoogleFonts.outfit(color: Colors.white)),
+            Text('Ayuda y Soporte', style: OptimizedTheme.heading3),
           ],
         ),
         content: SizedBox(
@@ -917,20 +920,16 @@ class _ProfileTabState extends State<_ProfileTab> {
             children: [
               Text(
                 'Escribe tu solicitud:',
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: OptimizedTheme.bodyText.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: requestController,
                 maxLines: 5,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: OptimizedTheme.bodyText,
                 decoration: InputDecoration(
                   hintText: 'Describe tu solicitud aquí...',
-                  hintStyle: GoogleFonts.outfit(color: Colors.white54),
+                  hintStyle: OptimizedTheme.bodyTextSmall.copyWith(color: Colors.white54),
                   filled: true,
                   fillColor: Colors.white.withOpacity(0.1),
                   border: OutlineInputBorder(
@@ -953,7 +952,7 @@ class _ProfileTabState extends State<_ProfileTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+            child: Text('Cancelar', style: OptimizedTheme.bodyTextSmall),
           ),
           Container(
             decoration: BoxDecoration(
@@ -976,7 +975,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                   );
                 }
               },
-              child: Text('Enviar', style: GoogleFonts.outfit(color: Colors.white)),
+              child: Text('Enviar', style: OptimizedTheme.bodyText),
             ),
           ),
         ],
@@ -1110,7 +1109,7 @@ class _ProfileTabState extends State<_ProfileTab> {
         ),
         child: ListTile(
           leading: Icon(icon, color: Colors.white70),
-          title: Text(title, style: GoogleFonts.outfit(color: Colors.white)),
+          title: Text(title, style: OptimizedTheme.bodyText),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white54),
           onTap: onTap,
         ),
@@ -1157,7 +1156,7 @@ class _SearchResultsTab extends StatelessWidget {
         children: [
           Text(
             'Resultados para "$searchQuery"',
-            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            style: OptimizedTheme.heading2,
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -1177,7 +1176,7 @@ class _SearchResultsTab extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'No se encontraron resultados',
-                          style: GoogleFonts.outfit(fontSize: 18, color: Colors.white54),
+                          style: OptimizedTheme.heading3.copyWith(fontSize: 18, color: Colors.white54),
                         ),
                       ],
                     ),
@@ -1252,10 +1251,9 @@ class _SearchResultsTab extends StatelessWidget {
                                   children: [
                                     Text(
                                       book['title'] ?? 'Sin título',
-                                      style: GoogleFonts.outfit(
+                                      style: OptimizedTheme.caption.copyWith(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -1263,7 +1261,7 @@ class _SearchResultsTab extends StatelessWidget {
                                     ),
                                     Text(
                                       book['author'] ?? 'Autor desconocido',
-                                      style: GoogleFonts.outfit(
+                                      style: OptimizedTheme.caption.copyWith(
                                         fontSize: 8,
                                         color: Colors.white70,
                                       ),
@@ -1289,6 +1287,7 @@ class _SearchResultsTab extends StatelessWidget {
     );
   }
 }
+
 class _TopBooksTab extends StatefulWidget {
   const _TopBooksTab({super.key});
 
@@ -1320,7 +1319,7 @@ class _TopBooksTabState extends State<_TopBooksTab> {
         children: [
           Text(
             'Top 10 Libros Más Leídos',
-            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            style: OptimizedTheme.heading2,
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -1333,7 +1332,7 @@ class _TopBooksTabState extends State<_TopBooksTab> {
                 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Center(
-                    child: Text('No hay estadísticas disponibles', style: GoogleFonts.outfit(color: Colors.white70)),
+                    child: Text('No hay estadísticas disponibles', style: OptimizedTheme.bodyTextSmall),
                   );
                 }
                 
@@ -1373,10 +1372,10 @@ class _TopBooksTabState extends State<_TopBooksTab> {
                           leading: CircleAvatar(
                             backgroundColor: AppColors.yaviracOrange,
                             foregroundColor: Colors.white,
-                            child: Text('${index + 1}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                            child: Text('${index + 1}', style: OptimizedTheme.bodyText.copyWith(fontWeight: FontWeight.bold)),
                           ),
-                          title: Text(book['title'] ?? 'Sin título', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
-                          subtitle: Text('${book['author'] ?? 'Autor desconocido'} • $openCount lecturas', style: GoogleFonts.outfit(color: Colors.white70)),
+                          title: Text(book['title'] ?? 'Sin título', style: OptimizedTheme.bodyText.copyWith(fontWeight: FontWeight.w600)),
+                          subtitle: Text('${book['author'] ?? 'Autor desconocido'} • $openCount lecturas', style: OptimizedTheme.bodyTextSmall),
                           trailing: const Icon(Icons.trending_up, color: Colors.greenAccent),
                         ),
                       ),
@@ -1391,7 +1390,6 @@ class _TopBooksTabState extends State<_TopBooksTab> {
     );
   }
 }
-
 
 class _AddContentTab extends StatelessWidget {
   final bool canEdit;
@@ -1413,18 +1411,20 @@ class _AddContentTab extends StatelessWidget {
         children: [
           Text(
             'Agregar Contenido',
-            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            style: OptimizedTheme.heading2,
           ),
           const SizedBox(height: 32),
           Row(
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => Navigator.push(
+                  onTap: () => OptimizedModals.showAddBookModal(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddBookScreen(),
-                    ),
+                    onSuccess: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Libro agregado exitosamente')),
+                      );
+                    },
                   ),
                   child: Container(
                     height: 200,
@@ -1441,7 +1441,7 @@ class _AddContentTab extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'Agregar Libros',
-                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                          style: OptimizedTheme.heading3.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -1451,11 +1451,13 @@ class _AddContentTab extends StatelessWidget {
               const SizedBox(width: 24),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => Navigator.push(
+                  onTap: () => OptimizedModals.showAddVideoModal(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddVideoScreen(),
-                    ),
+                    onSuccess: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Video agregado exitosamente')),
+                      );
+                    },
                   ),
                   child: Container(
                     height: 200,
@@ -1472,7 +1474,7 @@ class _AddContentTab extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'Agregar Videos',
-                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                          style: OptimizedTheme.heading3.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -1503,8 +1505,14 @@ class _RequestsTab extends StatefulWidget {
   State<_RequestsTab> createState() => _RequestsTabState();
 }
 
-class _RequestsTabState extends State<_RequestsTab> {
+class _RequestsTabState extends State<_RequestsTab> with AutomaticKeepAliveClientMixin {
   late Stream<List<Map<String, dynamic>>> _requestsStream;
+  StreamSubscription? _subscription;
+  List<Map<String, dynamic>>? _cachedData;
+  Timer? _debounceTimer;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -1512,22 +1520,27 @@ class _RequestsTabState extends State<_RequestsTab> {
     _initializeStream();
   }
 
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
   void _initializeStream() {
+    _subscription?.cancel();
     _requestsStream = Supabase.instance.client
         .from('requests')
         .stream(primaryKey: ['id'])
+        .eq('status', 'pendiente') // Solo solicitudes pendientes por defecto
         .order('created_at', ascending: false)
+        .limit(20) // Limitar a 20 registros
         .map((data) => List<Map<String, dynamic>>.from(data));
-  }
-
-  void _refreshStream() {
-    setState(() {
-      _initializeStream();
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1535,90 +1548,34 @@ class _RequestsTabState extends State<_RequestsTab> {
         children: [
           Text(
             'Solicitudes de Soporte',
-            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            style: OptimizedTheme.heading2,
           ),
           const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: _requestsStream,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting && _cachedData == null) {
                   return const Center(child: CircularProgressIndicator(color: Colors.white));
                 }
                 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text('No hay solicitudes', style: GoogleFonts.outfit(color: Colors.white70)));
+                final data = snapshot.data ?? _cachedData ?? [];
+                if (snapshot.hasData) _cachedData = snapshot.data;
+                
+                if (data.isEmpty) {
+                  return Center(child: Text('No hay solicitudes', style: OptimizedTheme.bodyTextSmall));
                 }
                 
                 return ListView.builder(
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final request = snapshot.data![index];
-                    final isResolved = request['status'] == 'resuelto';
-                    
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: GlassmorphicContainer(
-                        width: double.infinity,
-                        height: 100,
-                        borderRadius: 12,
-                        blur: 10,
-                        alignment: Alignment.center,
-                        border: 0,
-                        linearGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            (isResolved ? Colors.green : Colors.orange).withOpacity(0.1),
-                            (isResolved ? Colors.green : Colors.orange).withOpacity(0.05),
-                          ],
-                        ),
-                        borderGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.2),
-                            Colors.white.withOpacity(0.1),
-                          ],
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: isResolved ? Colors.green : Colors.orange,
-                            child: Icon(
-                              isResolved ? Icons.check : Icons.help_outline,
-                              color: Colors.white,
-                            ),
-                          ),
-                          title: Text(request['request_text']?.toString().substring(0, request['request_text'].toString().length > 30 ? 30 : request['request_text'].toString().length) ?? 'Solicitud', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${request['user_name'] ?? 'Usuario'} • ayuda'.toUpperCase(), style: GoogleFonts.outfit(color: Colors.white70)),
-                              Text(isResolved ? 'RESUELTO' : 'PENDIENTE', style: GoogleFonts.outfit(color: isResolved ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.visibility, color: Colors.white70),
-                                onPressed: () => _showRequestDetails(context, request),
-                              ),
-                              if (!isResolved)
-                                IconButton(
-                                  icon: const Icon(Icons.check_circle, color: Colors.green),
-                                  onPressed: () => _markAsResolved(context, request['id'].toString()),
-                                ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteRequest(context, request['id'].toString()),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                  itemCount: data.length,
+                  cacheExtent: 500, // Caché de widgets
+                  itemBuilder: (context, index) => _RequestItem(
+                    key: ValueKey(data[index]['id']), // Key para optimización
+                    request: data[index],
+                    onMarkResolved: (id) => _markAsResolved(context, id),
+                    onDelete: (id) => _deleteRequest(context, id),
+                    onShowDetails: (request) => _showRequestDetails(context, request),
+                  ),
                 );
               },
             ),
@@ -1645,17 +1602,17 @@ class _RequestsTabState extends State<_RequestsTab> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: Text(request['title'] ?? 'Solicitud', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(request['title'] ?? 'Solicitud', style: OptimizedTheme.heading3.copyWith(fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: 400,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Usuario: ${request['user_name'] ?? 'Desconocido'}', style: GoogleFonts.outfit(color: Colors.white70)),
-              Text('Email: ${request['user_email'] ?? 'No disponible'}', style: GoogleFonts.outfit(color: Colors.white70)),
+              Text('Usuario: ${request['user_name'] ?? 'Desconocido'}', style: OptimizedTheme.bodyTextSmall),
+              Text('Email: ${request['user_email'] ?? 'No disponible'}', style: OptimizedTheme.bodyTextSmall),
               const SizedBox(height: 16),
-              Text('Descripción:', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('Descripción:', style: OptimizedTheme.bodyText.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1663,7 +1620,7 @@ class _RequestsTabState extends State<_RequestsTab> {
                   color: Colors.black.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(request['request_text'] ?? request['description'] ?? 'Sin descripción', style: GoogleFonts.outfit(color: Colors.white)),
+                child: Text(request['request_text'] ?? request['description'] ?? 'Sin descripción', style: OptimizedTheme.bodyText),
               ),
             ],
           ),
@@ -1671,7 +1628,7 @@ class _RequestsTabState extends State<_RequestsTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cerrar', style: GoogleFonts.outfit(color: Colors.white70)),
+            child: Text('Cerrar', style: OptimizedTheme.bodyTextSmall),
           ),
         ],
       ),
@@ -1679,41 +1636,149 @@ class _RequestsTabState extends State<_RequestsTab> {
   }
 
   Future<void> _markAsResolved(BuildContext context, String requestId) async {
-    try {
-      await Supabase.instance.client
-          .from('requests')
-          .update({'status': 'resuelto'})
-          .eq('id', requestId);
-      
-      // StreamBuilder se actualiza automáticamente, no necesita setState
-      _refreshStream();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Solicitud marcada como resuelta', style: GoogleFonts.outfit()), backgroundColor: Colors.green),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
-      );
-    }
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        await Supabase.instance.client
+            .from('requests')
+            .update({'status': 'resuelto'})
+            .eq('id', requestId);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('✅ Solicitud marcada como resuelta', style: OptimizedTheme.bodyText), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('❌ Error: $e', style: OptimizedTheme.bodyText), backgroundColor: Colors.red),
+          );
+        }
+      }
+    });
   }
 
   Future<void> _deleteRequest(BuildContext context, String requestId) async {
-    try {
-      await Supabase.instance.client
-          .from('requests')
-          .delete()
-          .eq('id', requestId);
-      
-      // StreamBuilder se actualiza automáticamente, no necesita setState
-      _refreshStream();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('🗑️ Solicitud eliminada', style: GoogleFonts.outfit()), backgroundColor: Colors.orange),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e', style: GoogleFonts.outfit()), backgroundColor: Colors.red),
-      );
-    }
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        await Supabase.instance.client
+            .from('requests')
+            .delete()
+            .eq('id', requestId);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('🗑️ Solicitud eliminada', style: OptimizedTheme.bodyText), backgroundColor: Colors.orange),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('❌ Error: $e', style: OptimizedTheme.bodyText), backgroundColor: Colors.red),
+          );
+        }
+      }
+    });
+  }
+}
+
+class _RequestItem extends StatelessWidget {
+  final Map<String, dynamic> request;
+  final Function(String) onMarkResolved;
+  final Function(String) onDelete;
+  final Function(Map<String, dynamic>) onShowDetails;
+
+  const _RequestItem({
+    super.key,
+    required this.request,
+    required this.onMarkResolved,
+    required this.onDelete,
+    required this.onShowDetails,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isResolved = request['status'] == 'resuelto';
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GlassmorphicContainer(
+        width: double.infinity,
+        height: 100,
+        borderRadius: 12,
+        blur: 10,
+        alignment: Alignment.center,
+        border: 0,
+        linearGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            (isResolved ? Colors.green : Colors.orange).withOpacity(0.1),
+            (isResolved ? Colors.green : Colors.orange).withOpacity(0.05),
+          ],
+        ),
+        borderGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.2),
+            Colors.white.withOpacity(0.1),
+          ],
+        ),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: isResolved ? Colors.green : Colors.orange,
+            child: Icon(
+              isResolved ? Icons.check : Icons.help_outline,
+              color: Colors.white,
+            ),
+          ),
+          title: Text(
+            request['request_text']?.toString().substring(0, request['request_text'].toString().length > 30 ? 30 : request['request_text'].toString().length) ?? 'Solicitud', 
+            style: OptimizedTheme.bodyText.copyWith(fontWeight: FontWeight.bold)
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${request['user_name'] ?? 'Usuario'} • ayuda'.toUpperCase(), style: OptimizedTheme.bodyTextSmall),
+              Text(isResolved ? 'RESUELTO' : 'PENDIENTE', style: OptimizedTheme.bodyTextSmall.copyWith(color: isResolved ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.visibility, color: Colors.white70),
+                onPressed: () => onShowDetails(request),
+              ),
+              if (!isResolved)
+                IconButton(
+                  icon: const Icon(Icons.check_circle, color: Colors.green),
+                  onPressed: () => OptimizedModals.showConfirmModal(
+                    context,
+                    title: 'Marcar como Resuelto',
+                    message: '¿Estás seguro de que quieres marcar esta solicitud como resuelta?',
+                    onConfirm: () => onMarkResolved(request['id'].toString()),
+                    confirmText: 'Marcar Resuelto',
+                  ),
+                ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => OptimizedModals.showConfirmModal(
+                  context,
+                  title: 'Eliminar Solicitud',
+                  message: '¿Estás seguro de que quieres eliminar esta solicitud? Esta acción no se puede deshacer.',
+                  onConfirm: () => onDelete(request['id'].toString()),
+                  confirmText: 'Eliminar',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

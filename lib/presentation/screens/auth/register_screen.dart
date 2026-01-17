@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:glassmorphism/glassmorphism.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../../data/services/supabase_auth_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/optimized_theme.dart';
 import '../../theme/glass_theme.dart';
-import '../../widgets/futuristic_widgets.dart';
+import '../../widgets/common_widgets.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -27,7 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Las contraseñas no coinciden', style: GoogleFonts.outfit()),
+          content: Text('Las contraseñas no coinciden', style: OptimizedTheme.bodyText),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_passwordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('La contraseña debe tener al menos 6 caracteres', style: GoogleFonts.outfit()),
+          content: Text('La contraseña debe tener al menos 6 caracteres', style: OptimizedTheme.bodyText),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -47,7 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_nameController.text.trim().isEmpty || _emailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Todos los campos son obligatorios', style: GoogleFonts.outfit()),
+          content: Text('Todos los campos son obligatorios', style: OptimizedTheme.bodyText),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -67,7 +67,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Registro exitoso', style: GoogleFonts.outfit()),
+          content: Text('Registro exitoso', style: OptimizedTheme.bodyText),
           backgroundColor: GlassTheme.successColor,
         ),
       );
@@ -78,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error en el registro. Verifica tu conexión y configuración de Supabase', style: GoogleFonts.outfit()),
+          content: Text('Error en el registro. Verifica tu conexión y configuración de Supabase', style: OptimizedTheme.bodyText),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -255,7 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Text(
               'NUESTRA MISIÓN',
-              style: GoogleFonts.orbitron(
+              style: OptimizedTheme.heading3.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.yaviracOrange,
@@ -266,7 +266,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Text(
               'Formar profesionales de excelencia enfocados en Ciencia, Tecnología y Sociedad.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: OptimizedTheme.bodyText.copyWith(
                 fontSize: 15,
                 color: Colors.white.withOpacity(0.9),
                 height: 1.5,
@@ -275,7 +275,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 32),
             Text(
               'NUESTRA VISIÓN',
-              style: GoogleFonts.orbitron(
+              style: OptimizedTheme.heading3.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.yaviracBlueDark,
@@ -286,7 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Text(
               'Al 2027 el Instituto Superior Tecnológico de Turismo y Patrimonio Yavirac será una institución de vanguardia en la formación tecnológica y conservación del patrimonio.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: OptimizedTheme.bodyText.copyWith(
                 fontSize: 15,
                 color: Colors.white.withOpacity(0.9),
                 height: 1.5,
@@ -321,20 +321,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 16),
           Text(
             'CREAR CUENTA',
-            style: GoogleFonts.orbitron(
+            style: OptimizedTheme.heading2.copyWith(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
               letterSpacing: 2,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Únete a la biblioteca del futuro',
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: OptimizedTheme.bodyTextSmall,
           ),
         ],
       ),
@@ -416,10 +412,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: TextField(
           controller: controller,
           obscureText: obscure,
-          style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
+          style: OptimizedTheme.bodyText.copyWith(fontSize: 14),
           decoration: InputDecoration(
             labelText: label,
-            labelStyle: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+            labelStyle: OptimizedTheme.bodyTextSmall.copyWith(fontSize: 12),
             prefixIcon: Icon(icon, color: AppColors.yaviracOrange, size: 20),
             filled: true,
             fillColor: Colors.black.withOpacity(0.3),
@@ -465,10 +461,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                   : Text(
                       'REGISTRARSE',
-                      style: GoogleFonts.orbitron(
+                      style: OptimizedTheme.bodyText.copyWith(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
                         letterSpacing: 1,
                       ),
                     ),
@@ -487,7 +482,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           Text(
             '¿Ya tienes cuenta? ',
-            style: GoogleFonts.outfit(color: Colors.white70),
+            style: OptimizedTheme.bodyTextSmall,
           ),
           TextButton(
             onPressed: () => Navigator.pushReplacement(
@@ -496,7 +491,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             child: Text(
               'Inicia sesión',
-              style: GoogleFonts.outfit(
+              style: OptimizedTheme.bodyText.copyWith(
                 color: AppColors.yaviracOrange,
                 fontWeight: FontWeight.bold,
               ),

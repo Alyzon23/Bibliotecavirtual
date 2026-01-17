@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/glass_theme.dart';
 import '../../../data/services/debug_service.dart';
-import 'simple_book_reader.dart';
 import 'flipbook_reader.dart';
 
 class BookDetailScreen extends StatefulWidget {
@@ -168,50 +167,40 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   }
 
   Future<void> _readBook() async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FlipBookReader(book: widget.book),
-      ),
-    );
+    if (widget.book['file_url'] != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FlipBookReader(book: widget.book),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay archivo disponible para este libro')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth > 800;
+    
     return Scaffold(
       body: Container(
         decoration: GlassTheme.decorationBackground,
         child: SafeArea(
           child: Column(
             children: [
-              // Header con botón de regreso
-              Padding(
-                padding: const EdgeInsets.all(16),
+              // Header compacto
+              Container(
+                height: 80,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   children: [
-                    GlassmorphicContainer(
-                      width: 50,
-                      height: 50,
-                      borderRadius: 25,
-                      blur: 15,
-                      alignment: Alignment.center,
-                      border: 0,
-                      linearGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                      ),
-                      borderGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.2),
-                          Colors.white.withOpacity(0.1),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                      onPressed: () => Navigator.pop(context),
                     ),
                     const Spacer(),
                     Text(
@@ -223,285 +212,263 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       ),
                     ),
                     const Spacer(),
-                    GlassmorphicContainer(
-                      width: 50,
-                      height: 50,
-                      borderRadius: 25,
-                      blur: 15,
-                      alignment: Alignment.center,
-                      border: 0,
-                      linearGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
+                    IconButton(
+                      icon: Icon(
+                        _isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: _isFavorite ? Colors.red : Colors.white,
+                        size: 24,
                       ),
-                      borderGradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.2),
-                          Colors.white.withOpacity(0.1),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          _isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: _isFavorite ? Colors.red : Colors.white,
-                        ),
-                        onPressed: _isLoading ? null : _toggleFavorite,
-                      ),
+                      onPressed: _isLoading ? null : _toggleFavorite,
                     ),
                   ],
                 ),
               ),
               
-              // Contenido principal
+              // Contenido principal con diseño web
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      // Portada y información principal
-                      GlassmorphicContainer(
-                        width: double.infinity,
-                        height: 400,
-                        borderRadius: 20,
-                        blur: 20,
-                        alignment: Alignment.center,
-                        border: 0,
-                        linearGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.1),
-                            Colors.white.withOpacity(0.05),
-                          ],
-                        ),
-                        borderGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.2),
-                            Colors.white.withOpacity(0.1),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Row(
-                            children: [
-                              // Portada del libro
-                              Container(
-                                width: 180,
-                                height: 280,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: widget.book['cover_url'] != null
-                                      ? Image.network(
-                                          widget.book['cover_url'],
-                                          fit: BoxFit.cover,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return Container(
-                                              color: Colors.grey.withOpacity(0.3),
-                                              child: const Center(
-                                                child: CircularProgressIndicator(color: Colors.white),
-                                              ),
-                                            );
-                                          },
-                                          errorBuilder: (context, error, stackTrace) {
-                                            print('❌ Error cargando imagen: $error');
-                                            print('📸 URL: ${widget.book['cover_url']}');
-                                            return Container(
-                                              color: GlassTheme.primaryColor.withOpacity(0.3),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  const Icon(Icons.broken_image, size: 40, color: Colors.white54),
-                                                  const SizedBox(height: 8),
-                                                  Text(
-                                                    'Error al cargar imagen',
-                                                    style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12),
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        )
-                                      : Container(
-                                          color: GlassTheme.primaryColor.withOpacity(0.3),
-                                          child: const Icon(Icons.book, size: 80, color: Colors.white54),
-                                        ),
-                                ),
-                              ),
-                              
-                              const SizedBox(width: 24),
-                              
-                              // Información del libro
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      widget.book['title'] ?? 'Sin título',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                        height: 1.2,
-                                      ),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    
-                                    const SizedBox(height: 12),
-                                    
-                                    Text(
-                                      'por ${widget.book['author'] ?? 'Autor desconocido'}',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w500,
-                                        color: GlassTheme.primaryColor,
-                                      ),
-                                    ),
-                                    
-                                    const SizedBox(height: 20),
-                                    
-                                    // Información adicional
-                                    _buildInfoRow(Icons.calendar_today, 'Año', widget.book['year']?.toString() ?? 'N/A'),
-                                    const SizedBox(height: 8),
-                                    _buildInfoRow(Icons.qr_code, 'ISBN', widget.book['isbn'] ?? 'N/A'),
-                                    const SizedBox(height: 8),
-                                    _buildInfoRow(Icons.person, 'Subido por', _createdByInfo),
-                                    const SizedBox(height: 8),
-                                    _buildInfoRow(Icons.category, 'Categoría', widget.book['category'] ?? 'General'),
-                                    const SizedBox(height: 8),
-                                    _buildInfoRow(Icons.description, 'Formato', widget.book['format']?.toUpperCase() ?? 'PDF'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                  child: Center(
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: isWideScreen ? 1200 : double.infinity,
                       ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Descripción
-                      if (widget.book['description'] != null && widget.book['description'].toString().isNotEmpty)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white.withOpacity(0.05),
-                                Colors.white.withOpacity(0.02),
-                              ],
-                            ),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                            ),
-                          ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.description, color: GlassTheme.primaryColor, size: 24),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Descripción',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  widget.book['description'],
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 16,
-                                    color: Colors.white70,
-                                    height: 1.6,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Botón de leer libro
-                      GlassmorphicContainer(
-                        width: double.infinity,
-                        height: 70,
-                        borderRadius: 20,
-                        blur: 15,
-                        alignment: Alignment.center,
-                        border: 0,
-                        linearGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            GlassTheme.primaryColor.withOpacity(0.8),
-                            GlassTheme.secondaryColor.withOpacity(0.6),
-                          ],
-                        ),
-                        borderGradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.3),
-                            Colors.white.withOpacity(0.1),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: _readBook,
-                            child: Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              alignment: Alignment.center,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.menu_book, color: Colors.white, size: 28),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Leer Libro',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      padding: const EdgeInsets.all(32),
+                      child: isWideScreen ? _buildWebLayout() : _buildMobileLayout(),
+                    ),
                   ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildWebLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Portada (lado izquierdo)
+        Container(
+          width: 300,
+          child: Column(
+            children: [
+              _buildBookCover(300, 400),
+              const SizedBox(height: 24),
+              _buildReadButton(),
+            ],
+          ),
+        ),
+        
+        const SizedBox(width: 48),
+        
+        // Información (lado derecho)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBookInfo(),
+              const SizedBox(height: 32),
+              _buildBookDetails(),
+              if (widget.book['description'] != null && widget.book['description'].toString().isNotEmpty) ...[
+                const SizedBox(height: 32),
+                _buildDescription(),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildMobileLayout() {
+    return Column(
+      children: [
+        _buildBookCover(200, 280),
+        const SizedBox(height: 24),
+        _buildBookInfo(),
+        const SizedBox(height: 24),
+        _buildBookDetails(),
+        if (widget.book['description'] != null && widget.book['description'].toString().isNotEmpty) ...[
+          const SizedBox(height: 24),
+          _buildDescription(),
+        ],
+        const SizedBox(height: 32),
+        _buildReadButton(),
+      ],
+    );
+  }
+  
+  Widget _buildBookCover(double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: widget.book['cover_url'] != null
+            ? Image.network(
+                widget.book['cover_url'],
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: GlassTheme.primaryColor.withOpacity(0.3),
+                  child: const Icon(Icons.book, size: 80, color: Colors.white54),
+                ),
+              )
+            : Container(
+                color: GlassTheme.primaryColor.withOpacity(0.3),
+                child: const Icon(Icons.book, size: 80, color: Colors.white54),
+              ),
+      ),
+    );
+  }
+  
+  Widget _buildBookInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.book['title'] ?? 'Sin título',
+          style: GoogleFonts.outfit(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'por ${widget.book['author'] ?? 'Autor desconocido'}',
+          style: GoogleFonts.outfit(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: GlassTheme.primaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildBookDetails() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          _buildInfoRow(Icons.calendar_today, 'Año', widget.book['year']?.toString() ?? 'N/A'),
+          const Divider(color: Colors.white24, height: 24),
+          _buildInfoRow(Icons.qr_code, 'ISBN', widget.book['isbn'] ?? 'N/A'),
+          const Divider(color: Colors.white24, height: 24),
+          _buildInfoRow(Icons.person, 'Subido por', _createdByInfo),
+          const Divider(color: Colors.white24, height: 24),
+          _buildInfoRow(Icons.category, 'Categoría', widget.book['category'] ?? 'General'),
+          const Divider(color: Colors.white24, height: 24),
+          _buildInfoRow(Icons.description, 'Formato', widget.book['format']?.toUpperCase() ?? 'PDF'),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDescription() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.05),
+            Colors.white.withOpacity(0.02),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.description, color: GlassTheme.primaryColor, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'Descripción',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            widget.book['description'],
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              color: Colors.white70,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildReadButton() {
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            GlassTheme.primaryColor,
+            GlassTheme.secondaryColor,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: GlassTheme.primaryColor.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _readBook,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.menu_book, color: Colors.white, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'Leer Libro',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -512,29 +479,35 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white54, size: 18),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.white70,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: GlassTheme.primaryColor, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            label,
             style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.white70,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+          const Spacer(),
+          Flexible(
+            child: Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

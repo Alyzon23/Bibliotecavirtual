@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
-import 'core/theme/app_theme.dart';
-import 'core/theme/theme_manager.dart';
+import 'core/theme/optimized_theme.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/reset_password_screen.dart';
 import 'presentation/screens/user/user_home.dart';
@@ -102,31 +101,33 @@ class _BibliotecaDigitalAppState extends State<BibliotecaDigitalApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: ThemeManager.isDarkMode,
-      builder: (context, darkMode, child) {
-        return MaterialApp(
-          navigatorKey: _navigatorKey,
-          title: AppConstants.appName,
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
-          home: _showSplash
-              ? SplashScreen(
-                  onComplete: () {
-                    setState(() {
-                      _showSplash = false;
-                    });
-                  },
-                )
-              : _isCheckingSession
-                  ? const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    )
-                  : _initialScreen,
+    return MaterialApp(
+      navigatorKey: _navigatorKey,
+      title: AppConstants.appName,
+      debugShowCheckedModeBanner: false,
+      theme: OptimizedTheme.theme,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          child: child!,
         );
       },
+      home: _showSplash
+          ? SplashScreen(
+              onComplete: () {
+                setState(() {
+                  _showSplash = false;
+                });
+              },
+            )
+          : _isCheckingSession
+              ? const Scaffold(
+                  backgroundColor: Color(0xFF0F172A),
+                  body: Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                )
+              : _initialScreen,
     );
   }
 }

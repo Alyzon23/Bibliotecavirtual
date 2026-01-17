@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import '../../../core/theme/optimized_theme.dart';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 
@@ -140,7 +140,7 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
             const SizedBox(height: 16),
             Text(
               'Video no disponible',
-              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 16),
+              style: OptimizedTheme.bodyText.copyWith(fontSize: 16),
               textAlign: TextAlign.center,
             ),
             if (_originalUrl != null) ...[
@@ -188,10 +188,9 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
                   Expanded(
                     child: Text(
                       widget.video['title'] ?? 'Video',
-                      style: GoogleFonts.outfit(
+                      style: OptimizedTheme.heading3.copyWith(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -219,13 +218,13 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
                             const SizedBox(height: 16),
                             Text(
                               'Video no disponible',
-                              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 16),
+                              style: OptimizedTheme.bodyText.copyWith(fontSize: 16),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Este video tiene restricciones de reproducción',
-                              style: GoogleFonts.outfit(color: Colors.white54, fontSize: 14),
+                              style: OptimizedTheme.bodyTextSmall.copyWith(fontSize: 14),
                               textAlign: TextAlign.center,
                             ),
                             if (_originalUrl != null) ...[
@@ -274,26 +273,22 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
                   if (widget.video['description'] != null) ...[
                     Text(
                       'Descripción',
-                      style: GoogleFonts.outfit(
+                      style: OptimizedTheme.bodyText.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       widget.video['description'],
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
+                      style: OptimizedTheme.bodyTextSmall.copyWith(fontSize: 14),
                     ),
                   ],
                   if (widget.video['category'] != null) ...[
                     const SizedBox(height: 12),
                     Text(
                       'Categoría: ${widget.video['category']}',
-                      style: GoogleFonts.outfit(
+                      style: OptimizedTheme.bodyTextSmall.copyWith(
                         fontSize: 14,
                         color: Colors.white60,
                       ),

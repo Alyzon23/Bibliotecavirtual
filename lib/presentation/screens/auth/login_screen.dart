@@ -6,7 +6,7 @@ import '../../../data/services/supabase_auth_service.dart';
 import '../../../data/services/test_users_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../theme/glass_theme.dart';
-import '../../widgets/futuristic_widgets.dart';
+import '../../widgets/common_widgets.dart';
 import '../user/user_home.dart';
 import '../admin/admin_dashboard.dart';
 import 'register_screen.dart';
@@ -381,29 +381,69 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLoginForm() {
     return Column(
       children: [
-        FuturisticInput(
-          controller: _emailController,
-          label: 'Email',
-          icon: Icons.alternate_email,
-          keyboardType: TextInputType.emailAddress,
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            style: GoogleFonts.outfit(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Email',
+              labelStyle: GoogleFonts.outfit(color: Colors.white70),
+              prefixIcon: const Icon(Icons.alternate_email, color: Colors.white70),
+              filled: true,
+              fillColor: Colors.black.withOpacity(0.3),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: GlassTheme.neonCyan),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 20),
-        FuturisticInput(
-          controller: _passwordController,
-          label: 'Contraseña',
-          icon: Icons.lock_outline,
-          obscureText: _obscurePassword,
-          onSubmitted: (_) => _login(),
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-              color: Colors.white70,
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: TextField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            onSubmitted: (_) => _login(),
+            style: GoogleFonts.outfit(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Contraseña',
+              labelStyle: GoogleFonts.outfit(color: Colors.white70),
+              prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  color: Colors.white70,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+              filled: true,
+              fillColor: Colors.black.withOpacity(0.3),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: GlassTheme.neonCyan),
+              ),
             ),
-            onPressed: () {
-              setState(() {
-                _obscurePassword = !_obscurePassword;
-              });
-            },
           ),
         ),
         const SizedBox(height: 16),
@@ -445,10 +485,34 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         const SizedBox(height: 32),
-        FuturisticButton(
-          onPressed: _isLoading ? null : _login,
-          text: 'INICIAR SESIÓN',
-          isLoading: _isLoading,
+        Container(
+          width: double.infinity,
+          height: 50,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [GlassTheme.neonCyan, GlassTheme.neonPurple],
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _isLoading ? null : _login,
+              borderRadius: BorderRadius.circular(12),
+              child: Center(
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        'INICIAR SESIÓN',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 24),
         Row(

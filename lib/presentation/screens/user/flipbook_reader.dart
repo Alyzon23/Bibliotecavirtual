@@ -9,6 +9,8 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/glass_theme.dart';
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 
 class FlipBookReader extends StatefulWidget {
   final Map<String, dynamic> book;
@@ -77,7 +79,8 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
     }
   }
 
-  Future<void> _toggleFavorite() async {
+  void _toggleFavorite() async {
+    print('🔥 DEBUG: _toggleFavorite() llamado');
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
@@ -119,17 +122,22 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
 
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
+      print('🔥 DEBUG: Tecla presionada: ${event.logicalKey}, _isFullScreen: $_isFullScreen');
       switch (event.logicalKey) {
         case LogicalKeyboardKey.escape:
+          print('🔥 DEBUG: ESC detectado, _isFullScreen: $_isFullScreen');
           if (_isFullScreen) {
+            print('🔥 DEBUG: ESC en pantalla completa - saliendo de fullscreen');
             setState(() {
               _isFullScreen = false;
               _showControls = true;
             });
+            return; // Evitar propagación
           } else {
+            print('🔥 DEBUG: ESC normal - cerrando libro');
             Navigator.pop(context);
+            return; // Evitar propagación
           }
-          break;
         case LogicalKeyboardKey.arrowLeft:
         case LogicalKeyboardKey.arrowUp:
           _previousPage();
@@ -143,10 +151,12 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
   }
 
   void _toggleFullScreen() {
+    print('🔥 DEBUG: _toggleFullScreen() llamado - Estado actual: $_isFullScreen');
     setState(() {
       _isFullScreen = !_isFullScreen;
       _showControls = !_isFullScreen;
     });
+    print('🔥 DEBUG: _toggleFullScreen() - Nuevo estado: $_isFullScreen');
   }
 
   Future<void> _loadPdf() async {
@@ -199,6 +209,7 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
   }
 
   void _nextPage() {
+    print('🔥 DEBUG: _nextPage() llamado - Página actual: $_currentPage');
     if (_document != null && _currentPage < _document!.pages.length) {
       setState(() {
         _currentPage++;
@@ -207,6 +218,7 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
   }
 
   void _previousPage() {
+    print('🔥 DEBUG: _previousPage() llamado - Página actual: $_currentPage');
     if (_currentPage > 1) {
       setState(() {
         _currentPage--;
@@ -215,7 +227,13 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
   }
 
   void _toggleControls() {
+    print('🔥 DEBUG: _toggleControls() llamado - _isFullScreen: $_isFullScreen, _showControls: $_showControls');
     if (!_isFullScreen) {
+      setState(() {
+        _showControls = !_showControls;
+      });
+    } else {
+      // Si ya está en fullscreen, solo cambiar controles
       setState(() {
         _showControls = !_showControls;
       });
@@ -265,7 +283,14 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
                     right: 0,
                     child: _buildFloatingHeader(),
                   ),
-                if (!_isLoading && _errorMessage == null) _buildNavigationOverlay(),
+                if (!_isLoading && _errorMessage == null) 
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    top: _showControls && !_isFullScreen ? 100 : (_isFullScreen ? 80 : 0),
+                    child: _buildNavigationOverlay(),
+                  ),
               ],
             ),
           ),
@@ -368,7 +393,10 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
               ),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  print('🔥 DEBUG: Botón ATRÁS presionado');
+                  Navigator.pop(context);
+                },
               ),
             ),
             const SizedBox(width: 16),
@@ -415,7 +443,10 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
             _buildHeaderButton(
               icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
               color: Colors.white,
-              onTap: _toggleFullScreen,
+              onTap: () {
+                print('🔥 DEBUG: Botón PANTALLA COMPLETA presionado');
+                _toggleFullScreen();
+              },
             ),
           ],
         ),
@@ -450,7 +481,10 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            print('🔥 DEBUG: HeaderButton presionado');
+            onTap();
+          },
           borderRadius: BorderRadius.circular(22.5),
           child: Container(
             width: 45,
@@ -492,25 +526,33 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
             color: _isDarkMode ? Colors.black : Colors.white,
             borderRadius: BorderRadius.circular(_isFullScreen ? 0 : 15),
           ),
-          child: ColorFiltered(
-            colorFilter: _isDarkMode 
-              ? const ColorFilter.matrix([
-                  -1.0, 0.0, 0.0, 0.0, 255.0,
-                  0.0, -1.0, 0.0, 0.0, 255.0,
-                  0.0, 0.0, -1.0, 0.0, 255.0,
-                  0.0, 0.0, 0.0, 1.0, 0.0,
-                ])
-              : const ColorFilter.matrix([
-                  1.0, 0.0, 0.0, 0.0, 0.0,
-                  0.0, 1.0, 0.0, 0.0, 0.0,
-                  0.0, 0.0, 1.0, 0.0, 0.0,
-                  0.0, 0.0, 0.0, 1.0, 0.0,
-                ]),
-            child: PdfPageView(
-              key: ValueKey('${_currentPage}_${_isDarkMode}'),
-              document: _document!,
-              pageNumber: _currentPage,
-              alignment: Alignment.center,
+          width: double.infinity,
+          height: double.infinity,
+          child: InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 3.0,
+            panEnabled: true,
+            scaleEnabled: true,
+            child: ColorFiltered(
+              colorFilter: _isDarkMode 
+                ? const ColorFilter.matrix([
+                    -1.0, 0.0, 0.0, 0.0, 255.0,
+                    0.0, -1.0, 0.0, 0.0, 255.0,
+                    0.0, 0.0, -1.0, 0.0, 255.0,
+                    0.0, 0.0, 0.0, 1.0, 0.0,
+                  ])
+                : const ColorFilter.matrix([
+                    1.0, 0.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0, 0.0,
+                  ]),
+              child: PdfPageView(
+                key: ValueKey('${_currentPage}_${_isDarkMode}'),
+                document: _document!,
+                pageNumber: _currentPage,
+                alignment: Alignment.center,
+              ),
             ),
           ),
         ),
@@ -578,6 +620,7 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
             icon: _isDarkMode ? Icons.light_mode : Icons.dark_mode,
             color: Colors.white,
             onTap: () {
+              print('🔥 DEBUG: Botón MODO OSCURO presionado');
               setState(() {
                 _isDarkMode = !_isDarkMode;
               });
@@ -615,94 +658,97 @@ class _FlipBookReaderState extends State<FlipBookReader> with TickerProviderStat
   }
 
   Widget _buildNavigationOverlay() {
-    return Positioned.fill(
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: _previousPage,
-              child: Container(
-                color: Colors.transparent,
-                child: _currentPage > 1
-                    ? Center(
-                        child: Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.black.withOpacity(0.7),
-                                Colors.black.withOpacity(0.5),
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              ),
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: GestureDetector(
+            onTap: _previousPage,
+            child: Container(
+              color: Colors.transparent,
+              child: _currentPage > 1
+                  ? Center(
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withOpacity(0.7),
+                              Colors.black.withOpacity(0.5),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.chevron_left,
-                            color: Colors.white,
-                            size: 35,
-                          ),
-                        ),
-                      )
-                    : const SizedBox(),
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 4, 
-            child: GestureDetector(
-              onTap: _toggleControls,
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: _nextPage,
-              child: Container(
-                color: Colors.transparent,
-                child: _document != null && _currentPage < _document!.pages.length
-                    ? Center(
-                        child: Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.black.withOpacity(0.7),
-                                Colors.black.withOpacity(0.5),
-                              ],
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 10,
+                              spreadRadius: 2,
                             ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.chevron_left,
+                          color: Colors.white,
+                          size: 35,
+                        ),
+                      ),
+                    )
+                  : const SizedBox(),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 4, 
+          child: GestureDetector(
+            onTap: () {
+              print('🔥 DEBUG: Clic en centro - activando fullscreen');
+              _toggleFullScreen();
+            },
+            child: Container(
+              color: Colors.transparent,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: GestureDetector(
+            onTap: _nextPage,
+            child: Container(
+              color: Colors.transparent,
+              child: _document != null && _currentPage < _document!.pages.length
+                  ? Center(
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withOpacity(0.7),
+                              Colors.black.withOpacity(0.5),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.chevron_right,
-                            color: Colors.white,
-                            size: 35,
-                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                      )
-                    : const SizedBox(),
-              ),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                          size: 35,
+                        ),
+                      ),
+                    )
+                  : const SizedBox(),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

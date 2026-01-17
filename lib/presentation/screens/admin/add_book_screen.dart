@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../theme/glass_theme.dart';
-import '../../widgets/futuristic_widgets.dart';
+import '../../widgets/common_widgets.dart';
 import '../../../data/services/cache_service.dart';
 
 class AddBookScreen extends StatefulWidget {
