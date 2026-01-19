@@ -112,6 +112,20 @@ class SupabaseAuthService {
     return false;
   }
 
+  Future<void> resetPassword(String email) async {
+    try {
+      print('🔄 Enviando email de reset a: $email');
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'https://bibliotecad1.netlify.app/reset-password',
+      );
+      print('✅ Email de reset enviado correctamente');
+    } catch (e) {
+      print('❌ Error enviando email de reset: $e');
+      throw e;
+    }
+  }
+
   Future<void> logout() async {
     await _supabase.auth.signOut();
     _currentUser = null;

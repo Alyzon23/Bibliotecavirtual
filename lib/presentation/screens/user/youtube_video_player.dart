@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../../core/theme/optimized_theme.dart';
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+
+// Solo importar en web
+import 'dart:html' as html if (dart.library.html) 'dart:html';
+import 'dart:ui_web' as ui_web if (dart.library.html) 'dart:ui_web';
 
 class YouTubeVideoPlayer extends StatefulWidget {
   final Map<String, dynamic> video;
@@ -19,6 +22,7 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
   bool _hasError = false;
   String? _originalUrl;
   YoutubePlayerController? _mobileController;
+  static final Set<String> _registeredViews = {};
 
   @override
   void initState() {
@@ -103,18 +107,21 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
         final viewType = 'youtube-iframe-$videoId';
         
         // Registrar el iframe solo una vez
-        ui_web.platformViewRegistry.registerViewFactory(
-          viewType,
-          (int viewId) {
-            final iframe = html.IFrameElement()
-              ..src = 'https://www.youtube.com/embed/$videoId?autoplay=0&controls=1'
-              ..style.border = 'none'
-              ..style.width = '100%'
-              ..style.height = '100%'
-              ..allowFullscreen = true;
-            return iframe;
-          },
-        );
+        if (kIsWeb && !_registeredViews.contains(viewType)) {
+          _registeredViews.add(viewType);
+          ui_web.platformViewRegistry.registerViewFactory(
+            viewType,
+            (int viewId) {
+              final iframe = html.IFrameElement()
+                ..src = 'https://www.youtube.com/embed/$videoId?autoplay=0&controls=1'
+                ..allowFullscreen = true;
+              iframe.style.border = 'none';
+              iframe.style.width = '100%';
+              iframe.style.height = '100%';
+              return iframe;
+            },
+          );
+        }
         
         return Container(
           width: double.infinity,
@@ -169,135 +176,150 @@ class _YouTubeVideoPlayerState extends State<YouTubeVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.black87,
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      widget.video['title'] ?? 'Video',
-                      style: OptimizedTheme.heading3.copyWith(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+          Navigator.pop(context);
+        }
+      },
+      child: GestureDetector(
+        onTap: () {
+          // Recuperar el foco cuando se toca la pantalla
+          FocusScope.of(context).requestFocus(FocusNode());
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Header con botón de escape visible
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.black87,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (_originalUrl != null)
-                    IconButton(
-                      icon: const Icon(Icons.open_in_new, color: Colors.white),
-                      onPressed: _openInYouTube,
-                    ),
-                ],
-              ),
-            ),
-            // Player
-            Flexible(
-              flex: kIsWeb ? 2 : 1,
-              child: _hasError 
-                  ? Container(
-                      color: Colors.grey.shade900,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.white54, size: 64),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Video no disponible',
-                              style: OptimizedTheme.bodyText.copyWith(fontSize: 16),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Este video tiene restricciones de reproducción',
-                              style: OptimizedTheme.bodyTextSmall.copyWith(fontSize: 14),
-                              textAlign: TextAlign.center,
-                            ),
-                            if (_originalUrl != null) ...[
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                onPressed: _openInYouTube,
-                                icon: const Icon(Icons.play_arrow),
-                                label: const Text('Ver en YouTube'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          widget.video['title'] ?? 'Video',
+                          style: OptimizedTheme.heading3.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    )
-                  : kIsWeb
-                      ? _buildWebPlayer()
-                      : _mobileController != null
-                          ? YoutubePlayer(
-                              controller: _mobileController!,
-                              showVideoProgressIndicator: true,
-                              progressIndicatorColor: Colors.red,
-                              progressColors: const ProgressBarColors(
-                                playedColor: Colors.red,
-                                handleColor: Colors.redAccent,
-                              ),
-                            )
-                          : Container(
-                              color: Colors.grey.shade900,
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
+                      if (_originalUrl != null)
+                        IconButton(
+                          icon: const Icon(Icons.open_in_new, color: Colors.white),
+                          onPressed: _openInYouTube,
+                        ),
+                    ],
+                  ),
+                ),
+                // Player
+                Flexible(
+                  flex: kIsWeb ? 2 : 1,
+                  child: _hasError 
+                      ? Container(
+                          color: Colors.grey.shade900,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.white54, size: 64),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Video no disponible',
+                                  style: OptimizedTheme.bodyText.copyWith(fontSize: 16),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Este video tiene restricciones de reproducción',
+                                  style: OptimizedTheme.bodyTextSmall.copyWith(fontSize: 14),
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (_originalUrl != null) ...[
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: _openInYouTube,
+                                    icon: const Icon(Icons.play_arrow),
+                                    label: const Text('Ver en YouTube'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
+                          ),
+                        )
+                      : kIsWeb
+                          ? _buildWebPlayer()
+                          : _mobileController != null
+                              ? YoutubePlayer(
+                                  controller: _mobileController!,
+                                  showVideoProgressIndicator: true,
+                                  progressIndicatorColor: Colors.red,
+                                  progressColors: const ProgressBarColors(
+                                    playedColor: Colors.red,
+                                    handleColor: Colors.redAccent,
+                                  ),
+                                )
+                              : Container(
+                                  color: Colors.grey.shade900,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                ),
+                // Video Info
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.black87,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.video['description'] != null) ...[
+                        Text(
+                          'Descripción',
+                          style: OptimizedTheme.bodyText.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.video['description'],
+                          style: OptimizedTheme.bodyTextSmall.copyWith(fontSize: 14),
+                        ),
+                      ],
+                      if (widget.video['category'] != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Categoría: ${widget.video['category']}',
+                          style: OptimizedTheme.bodyTextSmall.copyWith(
+                            fontSize: 14,
+                            color: Colors.white60,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
-            // Video Info
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: Colors.black87,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.video['description'] != null) ...[
-                    Text(
-                      'Descripción',
-                      style: OptimizedTheme.bodyText.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.video['description'],
-                      style: OptimizedTheme.bodyTextSmall.copyWith(fontSize: 14),
-                    ),
-                  ],
-                  if (widget.video['category'] != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'Categoría: ${widget.video['category']}',
-                      style: OptimizedTheme.bodyTextSmall.copyWith(
-                        fontSize: 14,
-                        color: Colors.white60,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

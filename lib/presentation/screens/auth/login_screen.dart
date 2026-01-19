@@ -102,6 +102,106 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: Text(
+          'Recuperar Contraseña',
+          style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Ingresa tu email para recibir un enlace de recuperación',
+              style: GoogleFonts.outfit(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              style: GoogleFonts.outfit(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                prefixIcon: const Icon(Icons.email, color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF00BCD4)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00BCD4),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              if (emailController.text.isNotEmpty) {
+                Navigator.pop(context);
+                await _resetPassword(emailController.text);
+              }
+            },
+            child: Text('Enviar', style: GoogleFonts.outfit()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetPassword(String email) async {
+    try {
+      await _authService.resetPassword(email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Se ha enviado un enlace de recuperación a tu email',
+            style: GoogleFonts.outfit(),
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      String errorMessage = 'Error al enviar email';
+      
+      if (e.toString().contains('over_email_send_rate_limit')) {
+        errorMessage = 'Ya se envió un email recientemente. Espera unos minutos antes de intentar de nuevo.';
+      } else if (e.toString().contains('User not found')) {
+        errorMessage = 'No existe una cuenta con este email.';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            errorMessage,
+            style: GoogleFonts.outfit(),
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -476,9 +576,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () => _showForgotPasswordDialog(),
               child: Text(
-                'Olvidé contraseña',
+                '¿Olvidaste tu contraseña?',
                 style: GoogleFonts.outfit(color: GlassTheme.neonCyan, fontSize: 13),
               ),
             ),

@@ -14,20 +14,27 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Inicializar Supabase con manejo de errores
+    // Mostrar app inmediatamente
+    runApp(const BibliotecaDigitalApp());
+    
+    // Inicializar Supabase en background
+    _initializeSupabaseInBackground();
+    
+  } catch (e) {
+    print('Error initializing app: $e');
+    runApp(const BibliotecaDigitalApp());
+  }
+}
+
+void _initializeSupabaseInBackground() async {
+  try {
     await Supabase.initialize(
       url: 'https://yrakkfviiybzbwjqotgu.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyYWtrZnZpaXliemJ3anFvdGd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0NDA2MTQsImV4cCI6MjA3NzAxNjYxNH0.hxdFNt7XirJv1PetfL_Cq0rYWDCCJIO963egiiDN-fE',
     );
-    
-    runApp(const BibliotecaDigitalApp());
-    
-    // Seed en background después de mostrar la app
     _seedDataInBackground();
   } catch (e) {
-    print('Error initializing app: $e');
-    // Ejecutar app sin Supabase si hay error
-    runApp(const BibliotecaDigitalApp());
+    print('Error initializing Supabase: $e');
   }
 }
 
@@ -106,28 +113,42 @@ class _BibliotecaDigitalAppState extends State<BibliotecaDigitalApp> {
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: OptimizedTheme.theme,
+      initialRoute: '/',
+      routes: {
+        '/': (context) => _showSplash
+            ? SplashScreen(
+                onComplete: () {
+                  setState(() {
+                    _showSplash = false;
+                  });
+                },
+              )
+            : _isCheckingSession
+                ? const Scaffold(
+                    backgroundColor: Color(0xFF0F172A),
+                    body: Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  )
+                : _initialScreen,
+        '/login': (context) => const LoginScreen(),
+        '/reset-password': (context) => const ResetPasswordScreen(),
+      },
+      onGenerateRoute: (settings) {
+        // Manejar rutas con parámetros
+        if (settings.name?.startsWith('/reset-password') == true) {
+          return MaterialPageRoute(
+            builder: (context) => const ResetPasswordScreen(),
+          );
+        }
+        return null;
+      },
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
           child: child!,
         );
       },
-      home: _showSplash
-          ? SplashScreen(
-              onComplete: () {
-                setState(() {
-                  _showSplash = false;
-                });
-              },
-            )
-          : _isCheckingSession
-              ? const Scaffold(
-                  backgroundColor: Color(0xFF0F172A),
-                  body: Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
-                )
-              : _initialScreen,
     );
   }
 }

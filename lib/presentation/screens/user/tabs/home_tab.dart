@@ -24,7 +24,7 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: 32),
           _buildSection('Libros Recientes', DataService.getRecentBooks()),
           const SizedBox(height: 24),
-          _buildSection('Videos Recientes', DataService.getRecentVideos()),
+          _buildSection('Videos Recientes', DataService.getRecentVideos(), isVideo: true),
         ],
       ),
     );
@@ -130,7 +130,7 @@ class HomeTab extends StatelessWidget {
     );
   }
   
-  Widget _buildSection(String title, Future<List<Map<String, dynamic>>> future) {
+  Widget _buildSection(String title, Future<List<Map<String, dynamic>>> future, {bool isVideo = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -142,6 +142,7 @@ class HomeTab extends StatelessWidget {
         HorizontalBookList(
           future: future,
           searchQuery: searchQuery,
+          isVideoList: isVideo,
         ),
       ],
     );

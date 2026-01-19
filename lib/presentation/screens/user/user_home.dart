@@ -159,11 +159,12 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin, TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    // Para móvil (APK) usar Drawer, para web usar sidebar fijo
+    // Para móvil (APK) usar Drawer y BottomNavigationBar, para web usar sidebar fijo
     final isMobile = !kIsWeb;
     
     return Scaffold(
       drawer: isMobile ? _buildDrawer() : null,
+      bottomNavigationBar: isMobile ? _buildBottomNavigationBar() : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.primaryGradient,
@@ -190,55 +191,10 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin, TickerProvid
   }
 
 
-  Widget _buildDrawer() {
-    return Drawer(
-      backgroundColor: Colors.transparent,
-      child: FadeInLeft(
-        child: GlassmorphicContainer(
-          width: double.infinity,
-          height: double.infinity,
-          borderRadius: 0,
-          blur: 20,
-          alignment: Alignment.center,
-          border: 0,
-          linearGradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.yaviracBlueDark.withOpacity(0.9),
-              AppColors.yaviracOrange.withOpacity(0.95),
-            ],
-          ),
-          borderGradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.1),
-              Colors.white.withOpacity(0.05),
-            ],
-          ),
-          child: Column(
-            children: [
-              _buildUserHeader(),
-              _buildMenuItems(),
-              _buildLogoutButton(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebar() {
-    return FadeInLeft(
-      child: GlassmorphicContainer(
-        width: 280,
-        height: double.infinity,
-        borderRadius: 0,
-        blur: 20,
-        alignment: Alignment.center,
-        border: 0,
-        linearGradient: LinearGradient(
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -246,13 +202,56 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin, TickerProvid
             AppColors.yaviracOrange.withOpacity(0.95),
           ],
         ),
-        borderGradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
+      ),
+      child: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.transparent,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white60,
+        currentIndex: _selectedIndex > 4 ? 0 : _selectedIndex,
+        onTap: (index) {
+          _cachedTabs.clear();
+          setState(() => _selectedIndex = index);
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Inicio',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.library_books),
+            label: 'Libros',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.video_library),
+            label: 'Videos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Favoritos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.yaviracBlueDark.withOpacity(0.9),
+              AppColors.yaviracOrange.withOpacity(0.95),
+            ],
+          ),
         ),
         child: Column(
           children: [
@@ -261,6 +260,29 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin, TickerProvid
             _buildLogoutButton(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 280,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.yaviracBlueDark.withOpacity(0.9),
+            AppColors.yaviracOrange.withOpacity(0.95),
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildUserHeader(),
+          _buildMenuItems(),
+          _buildLogoutButton(),
+        ],
       ),
     );
   }

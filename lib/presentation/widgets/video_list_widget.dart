@@ -49,12 +49,16 @@ class VideoListWidget extends StatelessWidget {
             child: Stack(
               children: [
                 GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => YouTubeVideoPlayer(video: video),
-                    ),
-                  ),
+                  onTap: () {
+                    print('🎬 DEBUG: Tapping video: ${video['title']}');
+                    print('🎬 DEBUG: Video data: $video');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => YouTubeVideoPlayer(video: video),
+                      ),
+                    );
+                  },
                   child: GlassmorphicContainer(
                     width: double.infinity,
                     height: double.infinity,
