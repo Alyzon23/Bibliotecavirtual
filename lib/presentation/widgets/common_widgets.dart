@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/user/book_detail_screen.dart';
-import '../screens/user/youtube_video_player.dart';
+import '../screens/user/mobile_video_player.dart';
 
 // Widgets const reutilizables
 class AppWidgets {
@@ -38,7 +39,7 @@ class VideoCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => YouTubeVideoPlayer(video: video),
+          builder: (context) => MobileVideoPlayer(video: video),
         ),
       ),
       child: GlassmorphicContainer(

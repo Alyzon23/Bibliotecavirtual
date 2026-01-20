@@ -10,9 +10,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/glass_theme.dart';
 
-import 'dart:html' as html if (dart.library.html) 'dart:html';
-import 'dart:ui_web' as ui_web if (dart.library.html) 'dart:ui_web';
-
 class FlipBookReader extends StatefulWidget {
   final Map<String, dynamic> book;
 

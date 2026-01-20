@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import '../../data/services/cache_service.dart';
-import '../screens/user/youtube_video_player.dart';
+import '../screens/user/mobile_video_player.dart';
 
 class VideoListWidget extends StatelessWidget {
   final Future<List<Map<String, dynamic>>> future;
@@ -55,7 +56,7 @@ class VideoListWidget extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => YouTubeVideoPlayer(video: video),
+                        builder: (context) => MobileVideoPlayer(video: video),
                       ),
                     );
                   },

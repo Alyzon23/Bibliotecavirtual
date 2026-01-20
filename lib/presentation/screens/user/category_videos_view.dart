@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:glassmorphism/glassmorphism.dart';
-import 'youtube_video_player.dart';
+import 'mobile_video_player.dart';
 
 class CategoryVideosView extends StatelessWidget {
   final String category;
@@ -112,7 +112,7 @@ class CategoryVideosView extends StatelessWidget {
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => YouTubeVideoPlayer(video: video),
+                                  builder: (context) => MobileVideoPlayer(video: video),
                                 ),
                               ),
                               child: GlassmorphicContainer(

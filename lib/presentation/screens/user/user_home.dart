@@ -427,28 +427,27 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin, TickerProvid
 
   Widget _buildAppBar() {
     final isMobile = !kIsWeb;
-    return GlassmorphicContainer(
+    return Container(
       width: double.infinity,
       height: isMobile ? 60 : 70,
-      borderRadius: 0,
-      blur: 15,
-      alignment: Alignment.center,
-      border: 0,
-      linearGradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.white.withOpacity(0.1),
-          Colors.white.withOpacity(0.05),
-        ],
-      ),
-      borderGradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.white.withOpacity(0.2),
-          Colors.white.withOpacity(0.1),
-        ],
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isMobile ? [
+            // Móvil: más opaco para que se vea
+            AppColors.yaviracBlueDark.withOpacity(0.9),
+            AppColors.yaviracOrange.withOpacity(0.8),
+          ] : [
+            // Web: glassmorphism
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+        border: isMobile ? null : Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
@@ -470,6 +469,7 @@ class _UserHomeState extends State<UserHome> with LazyLoadingMixin, TickerProvid
                 fontSize: isMobile ? 18 : 24,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
+                color: Colors.white,
               ),
             ),
             const Spacer(),

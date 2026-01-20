@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'dart:html' as html if (dart.library.html) 'dart:html';
-
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -27,25 +25,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   void _checkResetCode() {
-    if (!kIsWeb) {
-      setState(() => _isValidCode = true);
-      return;
-    }
-    
-    try {
-      final uri = Uri.parse(html.window.location.href);
-      final code = uri.queryParameters['code'];
-      
-      if (code != null && code.isNotEmpty) {
-        setState(() => _isValidCode = true);
-        print('✅ Código de reset válido encontrado');
-      } else {
-        _showError('Enlace de recuperación inválido');
-      }
-    } catch (e) {
-      print('❌ Error procesando código: $e');
-      _showError('Error procesando enlace de recuperación');
-    }
+    // En móvil, asumir que el código es válido
+    setState(() => _isValidCode = true);
   }
 
   void _showError(String message) {

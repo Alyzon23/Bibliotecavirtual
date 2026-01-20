@@ -31,6 +31,37 @@
 
   <title>biblioteca_digital</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- CSS para ocultar información del reproductor YouTube -->
+  <style>
+    /* Ocultar información adicional del iframe de YouTube */
+    iframe[src*="youtube.com"] {
+      border: none !important;
+    }
+    
+    /* Ocultar elementos de información del reproductor */
+    .ytp-chrome-bottom,
+    .ytp-title,
+    .ytp-videowall-still,
+    .ytp-pause-overlay,
+    .ytp-cards-teaser,
+    .ytp-endscreen-content {
+      display: none !important;
+    }
+  </style>
+  
+  <!-- JavaScript para capturar ESC -->
+  <script>
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        console.log('ESC intercepted by JavaScript');
+        // Enviar mensaje a Flutter
+        window.dispatchEvent(new CustomEvent('flutter-escape'));
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true); // true = capturar en fase de captura, antes que YouTube
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
