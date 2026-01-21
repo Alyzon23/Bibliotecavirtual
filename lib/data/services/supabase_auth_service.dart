@@ -42,23 +42,29 @@ class SupabaseAuthService {
 
       if (response.user != null) {
         try {
-          await _supabase.from('users').insert({
+          print('✅ Usuario creado en auth.users: ${response.user!.id}');
+          
+          // Insertar en public.users
+          final insertResult = await _supabase.from('users').insert({
             'id': response.user!.id,
             'email': email,
             'name': name,
-            'role': 'lector',
+            'role': 'user', // Cambiar de 'lector' a 'user' para coincidir con las políticas
             'created_at': DateTime.now().toIso8601String(),
-          });
-          print('Usuario insertado en tabla users');
+          }).select();
+          
+          print('✅ Usuario insertado en public.users: $insertResult');
+          
         } catch (e) {
-          print('Error insertando usuario en tabla: $e');
+          print('❌ Error insertando usuario en tabla public.users: $e');
+          // Continuar aunque falle el insert en public.users
         }
 
         _currentUser = app_user.User(
           id: response.user!.id,
           email: email,
           name: name,
-          role: app_user.UserRole.lector,
+          role: app_user.UserRole.lector, // Mantener lector en el modelo
           createdAt: DateTime.now(),
         );
         return true;

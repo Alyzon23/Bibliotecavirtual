@@ -29,8 +29,8 @@ void main() async {
 void _initializeSupabaseInBackground() async {
   try {
     await Supabase.initialize(
-      url: 'https://yrakkfviiybzbwjqotgu.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyYWtrZnZpaXliemJ3anFvdGd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0NDA2MTQsImV4cCI6MjA3NzAxNjYxNH0.hxdFNt7XirJv1PetfL_Cq0rYWDCCJIO963egiiDN-fE',
+      url: 'https://pnefkrshzhlelycbxhqg.supabase.co',
+      anonKey: 'sb_publishable_6zUbPKbRdpcFyXmq8QuCKA_r27hgz1m',
     );
     _seedDataInBackground();
   } catch (e) {

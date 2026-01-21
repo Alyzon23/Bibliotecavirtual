@@ -1,24 +1,19 @@
--- Script para crear base de datos compatible con tu schema actual
--- Ejecutar en PostgreSQL local/remoto
-
--- Crear base de datos
-CREATE DATABASE biblioteca_digital;
-\c biblioteca_digital;
+-- Script SQL limpio para recrear tu base de datos
+-- Compatible con cualquier PostgreSQL estándar
 
 -- Crear extensiones necesarias
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Crear secuencia para requests
-CREATE SEQUENCE requests_id_seq;
+CREATE SEQUENCE IF NOT EXISTS requests_id_seq;
 
--- Tabla de usuarios (reemplaza auth.users de Supabase)
+-- Tabla de usuarios (sin dependencia de auth.users)
 CREATE TABLE public.users (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   email text NOT NULL UNIQUE,
   name text NOT NULL,
   role text DEFAULT 'user'::text,
-  password_hash text NOT NULL, -- Agregado para autenticación local
   created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );
@@ -32,7 +27,7 @@ CREATE TABLE public.books (
   cover_url text,
   file_url text NOT NULL,
   format text CHECK (format = ANY (ARRAY['pdf'::text, 'epub'::text])),
-  categories text[], -- Cambiado de ARRAY a text[]
+  categories text[], -- Cambiado de ARRAY genérico a text[]
   published_date date,
   created_at timestamp without time zone DEFAULT now(),
   created_by uuid,
@@ -96,7 +91,7 @@ CREATE TABLE public.book_stats (
   CONSTRAINT book_stats_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id)
 );
 
--- Tabla de historial de aperturas de libros
+-- Tabla de historial de aperturas
 CREATE TABLE public.book_opens_history (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   book_id uuid NOT NULL,
@@ -126,10 +121,8 @@ CREATE INDEX idx_books_category ON public.books(category);
 CREATE INDEX idx_books_title ON public.books(title);
 CREATE INDEX idx_videos_category ON public.videos(category);
 CREATE INDEX idx_users_email ON public.users(email);
-CREATE INDEX idx_favorites_user_book ON public.favorites(user_id, book_id);
-CREATE INDEX idx_reading_history_user ON public.reading_history(user_id);
 
--- Función para actualizar updated_at automáticamente
+-- Función para updated_at automático
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -138,18 +131,15 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers para updated_at
-CREATE TRIGGER update_videos_updated_at BEFORE UPDATE ON public.videos
+-- Trigger para videos
+CREATE TRIGGER update_videos_updated_at 
+    BEFORE UPDATE ON public.videos
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_book_stats_updated_at BEFORE UPDATE ON public.book_stats
+-- Trigger para book_stats
+CREATE TRIGGER update_book_stats_updated_at 
+    BEFORE UPDATE ON public.book_stats
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Insertar usuarios de prueba (contraseñas hasheadas con bcrypt)
-INSERT INTO public.users (email, name, role, password_hash) VALUES
-('admin@biblioteca.com', 'Administrador', 'admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'), -- password: password
-('bibliotecario@biblioteca.com', 'Bibliotecario', 'bibliotecario', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
-('lector@biblioteca.com', 'Lector', 'user', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
 
 -- Mensaje de confirmación
-SELECT 'Base de datos biblioteca_digital creada exitosamente' as status;
+SELECT 'Schema creado exitosamente - Listo para importar datos' as status;

@@ -1,46 +1,33 @@
--- MIGRACIÓN SUPABASE - EXPORTAR DATOS
--- Ejecutar en SQL Editor de Supabase origen
+-- Script para exportar schema y datos desde Supabase
+-- Ejecutar en el SQL Editor de Supabase
 
--- 1. EXPORTAR ESTRUCTURA DE TABLAS
+-- 1. Exportar estructura de tablas
+\d+ users;
+\d+ books;
+\d+ videos;
+\d+ categories;
+
+-- 2. Generar script de creación
 SELECT 
-    'CREATE TABLE ' || table_name || ' (' ||
-    string_agg(
-        column_name || ' ' || 
-        CASE 
-            WHEN data_type = 'character varying' THEN 'VARCHAR(' || character_maximum_length || ')'
-            WHEN data_type = 'text' THEN 'TEXT'
-            WHEN data_type = 'integer' THEN 'INTEGER'
-            WHEN data_type = 'bigint' THEN 'BIGINT'
-            WHEN data_type = 'boolean' THEN 'BOOLEAN'
-            WHEN data_type = 'timestamp with time zone' THEN 'TIMESTAMPTZ'
-            WHEN data_type = 'uuid' THEN 'UUID'
-            ELSE data_type
-        END ||
-        CASE WHEN is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END ||
-        CASE WHEN column_default IS NOT NULL THEN ' DEFAULT ' || column_default ELSE '' END
-        , ', '
-    ) || ');'
-FROM information_schema.columns 
-WHERE table_schema = 'public' 
-GROUP BY table_name;
+    'CREATE TABLE ' || schemaname||'.'||tablename||' (' || 
+    array_to_string(
+        array_agg(
+            column_name||' '||data_type||
+            case when character_maximum_length is not null 
+                then '('||character_maximum_length||')' 
+                else '' end||
+            case when is_nullable = 'NO' then ' NOT NULL' else '' end
+        ), 
+        ', '
+    ) || ');' as create_statement
+FROM information_schema.tables t
+JOIN information_schema.columns c ON c.table_name = t.tablename
+WHERE t.schemaname = 'public' 
+  AND t.tablename IN ('users', 'books', 'videos', 'categories')
+GROUP BY schemaname, tablename;
 
--- 2. EXPORTAR POLÍTICAS RLS
-SELECT 
-    'ALTER TABLE ' || tablename || ' ENABLE ROW LEVEL SECURITY;'
-FROM pg_tables 
-WHERE schemaname = 'public';
-
-SELECT 
-    'CREATE POLICY "' || policyname || '" ON ' || tablename ||
-    ' FOR ' || cmd || 
-    CASE WHEN roles != '{public}' THEN ' TO ' || array_to_string(roles, ', ') ELSE '' END ||
-    CASE WHEN qual IS NOT NULL THEN ' USING (' || qual || ')' ELSE '' END ||
-    CASE WHEN with_check IS NOT NULL THEN ' WITH CHECK (' || with_check || ')' ELSE '' END || ';'
-FROM pg_policies 
-WHERE schemaname = 'public';
-
--- 3. EXPORTAR DATOS (copiar resultado y ejecutar en destino)
--- Para cada tabla, ejecutar:
--- COPY (SELECT * FROM books) TO STDOUT WITH CSV HEADER;
--- COPY (SELECT * FROM videos) TO STDOUT WITH CSV HEADER;
--- COPY (SELECT * FROM users) TO STDOUT WITH CSV HEADER;
+-- 3. Exportar datos
+COPY users TO '/tmp/users.csv' DELIMITER ',' CSV HEADER;
+COPY books TO '/tmp/books.csv' DELIMITER ',' CSV HEADER;
+COPY videos TO '/tmp/videos.csv' DELIMITER ',' CSV HEADER;
+COPY categories TO '/tmp/categories.csv' DELIMITER ',' CSV HEADER;
